@@ -1,3 +1,8 @@
+course-docs*
+project-resources*
+stimuli*
+public/stimuli*
+
 .env
 .env.*
 .env.local
