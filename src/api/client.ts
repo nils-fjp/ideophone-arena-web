@@ -1,12 +1,171 @@
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api";
+import type {
+  AnswerResultResponse,
+  AttemptResponse,
+  AuthResponse,
+  GameSessionResponse,
+  LeaderboardEntry,
+  LoginRequest,
+  RegisterRequest,
+  RoundResponse,
+  StartSessionRequest,
+  SubmitAnswerRequest,
+} from "./types";
 
-export async function apiGet<T>(path: string): Promise<T> {
-  const response = await fetch(`${API_BASE_URL}${path}`);
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
+  /\/$/,
+  "",
+);
 
-  if (!response.ok) {
-    throw new Error(`GET ${path} failed with status ${response.status}`);
+const TOKEN_STORAGE_KEY = "ideophone-arena-token";
+
+type JsonBody = unknown;
+
+type ApiErrorBody = {
+  message?: string;
+  error?: string;
+  validationErrors?: Record<string, string>;
+};
+
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(status: number, message: string, body: unknown) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.body = body;
+  }
+}
+
+export function getAuthToken() {
+  return localStorage.getItem(TOKEN_STORAGE_KEY);
+}
+
+export function setAuthToken(token: string) {
+  localStorage.setItem(TOKEN_STORAGE_KEY, token);
+}
+
+export function clearAuthToken() {
+  localStorage.removeItem(TOKEN_STORAGE_KEY);
+}
+
+function apiUrl(path: string) {
+  return `${API_BASE_URL}${path}`;
+}
+
+function errorMessage(status: number, body: unknown, fallbackText: string) {
+  if (isApiErrorBody(body)) {
+    const validation = body.validationErrors
+      ? Object.entries(body.validationErrors)
+          .map(([field, message]) => `${field}: ${message}`)
+          .join("; ")
+      : "";
+    const main = body.message ?? body.error;
+    return [main, validation].filter(Boolean).join(" ") || fallbackText;
   }
 
-  return response.json() as Promise<T>;
+  return fallbackText || `Request failed with status ${status}`;
+}
+
+function isApiErrorBody(body: unknown): body is ApiErrorBody {
+  return typeof body === "object" && body !== null;
+}
+
+async function parseBody(response: Response) {
+  const text = await response.text();
+  if (!text) {
+    return undefined;
+  }
+
+  try {
+    return JSON.parse(text) as unknown;
+  } catch {
+    return text;
+  }
+}
+
+async function apiRequest<T>(
+  path: string,
+  options: {
+    method?: "GET" | "POST";
+    body?: JsonBody;
+  } = {},
+): Promise<T> {
+  const token = getAuthToken();
+  const headers = new Headers();
+
+  if (options.body !== undefined) {
+    headers.set("Content-Type", "application/json");
+  }
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const response = await fetch(apiUrl(path), {
+    method: options.method ?? "GET",
+    headers,
+    body: options.body === undefined ? undefined : JSON.stringify(options.body),
+  });
+
+  const parsed = await parseBody(response);
+
+  if (!response.ok) {
+    throw new ApiError(
+      response.status,
+      errorMessage(response.status, parsed, response.statusText),
+      parsed,
+    );
+  }
+
+  return parsed as T;
+}
+
+export function register(request: RegisterRequest) {
+  return apiRequest<AuthResponse>("/api/auth/register", {
+    method: "POST",
+    body: request,
+  });
+}
+
+export function login(request: LoginRequest) {
+  return apiRequest<AuthResponse>("/api/auth/login", {
+    method: "POST",
+    body: request,
+  });
+}
+
+export function startSession(request: StartSessionRequest = {}) {
+  return apiRequest<GameSessionResponse>("/api/game/sessions", {
+    method: "POST",
+    body: request,
+  });
+}
+
+export function getNextRound(sessionUuid: string) {
+  return apiRequest<RoundResponse>(
+    `/api/game/sessions/${encodeURIComponent(sessionUuid)}/rounds/next`,
+  );
+}
+
+export function submitAnswer(
+  sessionUuid: string,
+  request: SubmitAnswerRequest,
+) {
+  return apiRequest<AnswerResultResponse>(
+    `/api/game/sessions/${encodeURIComponent(sessionUuid)}/answers`,
+    {
+      method: "POST",
+      body: request,
+    },
+  );
+}
+
+export function getLeaderboard() {
+  return apiRequest<LeaderboardEntry[]>("/api/leaderboard");
+}
+
+export function getMyAttempts() {
+  return apiRequest<AttemptResponse[]>("/api/game/me/attempts");
 }

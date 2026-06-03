@@ -6,8 +6,14 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: "0.0.0.0", // make vite dev server listen on all addresses
-    port: 5173, // keep dev url stable
+    port: 5174, // 5173 is commonly reserved by local tooling; API calls use the proxy below
     strictPort: true, // make vite clearly fail if port already used
+    proxy: {
+      "/api": {
+        target: "http://localhost:8080",
+        changeOrigin: true,
+      },
+    },
   },
   preview: {
     host: "0.0.0.0",
