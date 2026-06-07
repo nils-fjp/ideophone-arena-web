@@ -245,7 +245,11 @@ export default function TrialPlayer({
       {phase === "submitting" ? <p className="notice-text">Submitting...</p> : null}
       {submitError ? <p className="error-text centered">{submitError}</p> : null}
       {hasFeedback ? (
-        <FeedbackPanel result={answerResult} sessionStats={sessionStats} />
+        <FeedbackPanel
+          result={answerResult}
+          round={round}
+          sessionStats={sessionStats}
+        />
       ) : null}
     </section>
   );

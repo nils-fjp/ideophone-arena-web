@@ -365,6 +365,27 @@ button {
   font-weight: 700;
 }
 
+.research-note {
+  display: grid;
+  gap: 0.35rem;
+  width: min(100%, 560px);
+  margin: 1rem auto 0;
+  padding-top: 1rem;
+  border-top: 1px solid #d4d1cb;
+  color: #343434;
+  line-height: 1.45;
+  text-align: left;
+}
+
+.research-note strong {
+  color: #202124;
+  font-size: 0.95rem;
+}
+
+.research-note span {
+  font-size: 1rem;
+}
+
 .score-section {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

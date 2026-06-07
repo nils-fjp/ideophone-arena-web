@@ -1,13 +1,16 @@
-import type { AnswerResultResponse } from "../api/types";
+import type { AnswerResultResponse, RoundResponse } from "../api/types";
 import type { SessionStats } from "../App";
+import { getResearchFlavorNote } from "../researchFlavor";
 
 type FeedbackPanelProps = {
   result: AnswerResultResponse;
+  round: RoundResponse;
   sessionStats: SessionStats;
 };
 
 export default function FeedbackPanel({
   result,
+  round,
   sessionStats,
 }: FeedbackPanelProps) {
   const sessionAccuracy =
@@ -18,6 +21,7 @@ export default function FeedbackPanel({
     result.totalAnswered > 0
       ? Math.round((result.totalCorrect / result.totalAnswered) * 100)
       : 0;
+  const researchNote = getResearchFlavorNote(round, result);
 
   return (
     <section
@@ -51,6 +55,11 @@ export default function FeedbackPanel({
           {result.totalCorrect} / {result.totalAnswered} ({accountAccuracy}%)
         </dd>
       </dl>
+
+      <aside className="research-note" aria-label={researchNote.label}>
+        <strong>{researchNote.label}</strong>
+        <span>{researchNote.text}</span>
+      </aside>
 
       <p className="notice-text">Next trial starts automatically.</p>
     </section>
