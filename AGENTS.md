@@ -4,7 +4,11 @@
 
 This repository is the React/Vite/TypeScript frontend for Ideophone Arena.
 
-The frontend exists to demonstrate the Spring Boot backend. It should make the backend MVP visible and testable in a browser: register, login, start session, play ideophone rounds, submit answers, see feedback, complete a session, and view leaderboard or recent attempts.
+The frontend is the playable research-game interface for a Spring Boot-backed web app inspired by Japanese ideophones, script presentation, and cross-modal iconicity.
+
+The frontend must preserve the working backend-driven MVP loop: register, login, start session, play ideophone rounds, submit answers, see feedback, complete a session, and view leaderboard or recent attempts.
+
+The frontend is now also allowed to improve game feel, visual identity, mobile usability, research flavor, and Script Lab presentation, as long as the backend remains authoritative for authentication, session identity, valid choices, correctness, answer storage, leaderboard data, and recent-attempt data.
 
 ## Current project phase
 
@@ -311,24 +315,26 @@ Do not duplicate large media files unless the task is specifically about asset p
 
 The preferred contract is backend-served `/stimuli/**`. If the frontend also serves local stimuli for development, keep that behavior documented and do not make it contradict the backend contract.
 
-## MVP browser flow
+## Core browser flow
 
-The frontend must support this flow:
+The frontend must preserve this backend-driven flow:
 
 1. Register or log in.
 2. Store the JWT locally.
 3. Send bearer token on protected API requests.
-4. Start a game session.
-5. Fetch the next round.
-6. Show fixation and ideophone stimulus sequence.
-7. Show two choices.
-8. Submit the selected ideophone.
-9. Show backend-provided feedback.
-10. Continue until completion.
-11. Show a completion state.
-12. Show leaderboard or recent attempts.
+4. Select one supported Script Lab presentation mode.
+5. Start a game session with `difficultyLevel: 1`.
+6. Fetch the next round.
+7. Show fixation.
+8. Present left and right ideophone cards according to the selected presentation mode.
+9. Show two answer choices.
+10. Submit the selected ideophone.
+11. Show backend-provided feedback.
+12. Continue until completion.
+13. Show a completion state.
+14. Show leaderboard or recent attempts.
 
-Current safe demo request:
+Supported Script Lab session requests:
 
 ```json
 {
@@ -337,9 +343,27 @@ Current safe demo request:
 }
 ```
 
+```json
+{
+  "conditionName": "CONDITION_2_SOKUON",
+  "difficultyLevel": 1
+}
+```
+
+```json
+{
+  "conditionName": "CONDITION_3_SOKUON",
+  "difficultyLevel": 1
+}
+```
+
 Do not expose arbitrary difficulty input.
 
-Do not expose condition selection unless every selectable value maps to a backend-supported enum and the backend has seeded rounds for it.
+Do not expose `TEXT_ONLY`.
+
+Do not expose numeric condition values.
+
+Do not add a new condition selector option unless the backend contract and backend tests prove that value is externally supported and seeded.
 
 ## API implementation rules
 
@@ -394,26 +418,28 @@ Do not include JWT secrets or database credentials in frontend code.
 
 ## Game-loop rules
 
-The trial flow should remain small and API-driven.
+The round flow should remain small and API-driven.
 
 Expected presentation:
 
 1. Fixation.
-2. Left ideophone/stimulus.
-3. Right ideophone/stimulus.
+2. Left ideophone card.
+3. Right ideophone card.
 4. Both options visible.
 5. User selects one option.
-6. Submit answer.
-7. Feedback appears.
-8. Continue.
+6. Submit answer to the backend.
+7. Feedback appears and remains readable.
+8. User explicitly continues to the next round.
 
-Do not redesign the experiment flow unless explicitly requested.
+Use “round” in player-facing UI. Avoid “trial” unless intentionally referring to the original experiment in documentation or science-flavored explanation.
 
 Completion must be a normal UI state, not an error-looking crash.
 
 The completion screen should remain visible until explicit restart.
 
 Restart must create a fresh backend session.
+
+Do not redesign the full app state machine unless explicitly requested. Prefer small vertical slices with proof.
 
 ## Error-handling minimum
 
@@ -487,16 +513,30 @@ Preferred full proof:
 1. Start backend on http://localhost:8081.
 2. Start frontend on http://localhost:5174.
 3. Open http://localhost:5174.
-4. Register a fresh user.
-5. Log in or confirm register-auto-login.
-6. Start a session.
-7. Confirm request body uses conditionName CONDITION_1_SOKUON and difficultyLevel 1.
-8. Complete at least one full trial.
-9. Confirm answer feedback appears.
-10. Continue to completion.
-11. Confirm completion screen remains visible.
-12. Confirm leaderboard or recent attempts are visible.
-13. Confirm no stale condition/difficulty controls appear.
+4. Register a fresh user or log in.
+5. Confirm Script Lab exposes exactly:
+   - Audio only
+   - Script match
+   - Script mismatch
+6. Confirm no difficulty selector is visible.
+7. Confirm no TEXT_ONLY option is visible.
+8. Start Audio only.
+9. Confirm the request uses conditionName CONDITION_1_SOKUON and difficultyLevel 1.
+10. Complete at least one full round.
+11. Confirm answer feedback appears and remains readable.
+12. Confirm feedback identifies selected and correct choices with side, display form, romaji, and meaning.
+13. Restart or return to the start screen.
+14. Start Script match.
+15. Confirm the request uses conditionName CONDITION_2_SOKUON and difficultyLevel 1.
+16. Confirm visible pre-answer script uses canonical script presentation.
+17. Restart or return to the start screen.
+18. Start Script mismatch.
+19. Confirm the request uses conditionName CONDITION_3_SOKUON and difficultyLevel 1.
+20. Confirm visible pre-answer script uses intentionally non-canonical/opposite script presentation.
+21. Continue to completion if practical.
+22. Confirm completion screen remains visible.
+23. Confirm leaderboard or recent attempts are visible.
+24. Check a narrow/mobile viewport and confirm cards, progress, feedback, and primary buttons remain usable.
 ```
 
 Short proof for smaller changes:
@@ -504,9 +544,11 @@ Short proof for smaller changes:
 ```text
 Open http://localhost:5174
 Log in
+Select one Script Lab mode
 Start session
 Submit answer
-See feedback
+See readable feedback
+Confirm progress updates
 ```
 
 ## Documentation rules
@@ -561,10 +603,16 @@ Before broad work, verify:
 the running browser app is current source, not stale Vite state
 backend URL is 8081
 frontend URL is 5174
-difficulty is locked to 1
-condition is CONDITION_1_SOKUON
-completion screen stays visible
-leaderboard or recent attempts are visible
+difficulty remains locked to 1
+Script Lab exposes only the three supported condition labels
+Script Lab sends backend enum strings, not numeric values
+TEXT_ONLY is not visible or selectable
+Audio only uses A/B placeholders before answer
+Script match renders canonical script before answer
+Script mismatch renders opposite script before answer
+feedback is readable and useful to non-Japanese readers
 progress labels are not misleading
-no stale condition/difficulty controls are visible
+completion screen stays visible
+leaderboard/recent attempts are not cluttering active play
+mobile/narrow layout is usable
 ```
