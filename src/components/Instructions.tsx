@@ -1,17 +1,26 @@
+import type { ConditionName } from "../api/types";
+import { SCRIPT_LAB_CONDITION_OPTIONS } from "../conditionPresentation";
+
 type InstructionsProps = {
+  difficultyLevel: 1;
   isStarting: boolean;
   error?: string;
+  selectedCondition: ConditionName;
   soundCheckError?: string;
   soundCheckStatus: "idle" | "checking" | "ready" | "error";
+  onConditionChange: (conditionName: ConditionName) => void;
   onSoundCheck: () => void;
   onStart: () => void;
 };
 
 export default function Instructions({
+  difficultyLevel,
   isStarting,
   error,
+  selectedCondition,
   soundCheckError,
   soundCheckStatus,
+  onConditionChange,
   onSoundCheck,
   onStart,
 }: InstructionsProps) {
@@ -44,7 +53,34 @@ export default function Instructions({
         trial when you are ready to continue.
       </p>
 
-      <p>Demo setup is locked to CONDITION_1_SOKUON, difficulty 1.</p>
+      <section className="script-lab-selector" aria-labelledby="script-lab-title">
+        <div>
+          <h2 id="script-lab-title">Script Lab</h2>
+          <p>
+            Compare presentation conditions for the same backend-driven task.
+            Difficulty stays fixed at {difficultyLevel}.
+          </p>
+        </div>
+
+        <div className="condition-option-list" role="group" aria-labelledby="script-lab-title">
+          {SCRIPT_LAB_CONDITION_OPTIONS.map((option) => {
+            const isSelected = option.conditionName === selectedCondition;
+
+            return (
+              <button
+                aria-pressed={isSelected}
+                className={`condition-option${isSelected ? " active" : ""}`}
+                key={option.conditionName}
+                type="button"
+                onClick={() => onConditionChange(option.conditionName)}
+              >
+                <span className="condition-option-title">{option.label}</span>
+                <span className="condition-option-copy">{option.explanation}</span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
 
       <div className="sound-check" aria-live="polite">
         <button

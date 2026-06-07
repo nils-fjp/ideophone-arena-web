@@ -1,232 +1,570 @@
 # AGENTS.md - Ideophone Arena Web
 
-## Project context
+## Repository role
 
-This is the frontend for Ideophone Arena, a small playable web app for a Spring Boot course. The backend is the grading-critical part. The deadline is June 5, 2026. The frontend must demonstrate the backend MVP, not become a design project.
+This repository is the React/Vite/TypeScript frontend for Ideophone Arena.
 
-Use this repo only after the backend proves the core API with curl or Postman.
+The frontend exists to demonstrate the Spring Boot backend. It should make the backend MVP visible and testable in a browser: register, login, start session, play ideophone rounds, submit answers, see feedback, complete a session, and view leaderboard or recent attempts.
 
-## Stack
+## Current project phase
 
-Use the existing stack:
+Ideophone Arena has passed its MVP stabilization phase and is now in Phase 2 exploratory development.
 
-- React
-- Vite
-- TypeScript
-- Minimal CSS or Tailwind only if already installed
+The frontend still must preserve the working Spring Boot-backed game loop, but it is now allowed to improve game feel, visual identity, mobile usability, research flavor, and Script Lab presentation.
 
-Do not add a UI framework unless explicitly asked.
+The frontend is no longer only a plain demo wrapper for the backend. It is the playable research-game interface for Ideophone Arena.
 
-## MVP frontend scope
+The backend remains authoritative for authentication, session identity, round identity, valid choices, correctness, answer storage, leaderboard data, and recent-attempt data.
 
-Build only the smallest UI that proves the game loop:
+The frontend may own:
 
-1. Register or log in.
-2. Store the JWT locally.
-3. Fetch one playable round.
-4. Show the prompt and two choices.
-5. Submit the selected choice.
-6. Show immediate feedback.
-7. Show either personal recent attempts or a simple leaderboard.
+- view state
+- local loading/error state
+- presentation sequence
+- React-rendered visible stimulus presentation
+- Script Lab selection among backend-supported conditions
+- player-facing wording
+- mobile/responsive layout
+- research flavor text
+- completion and dashboard layout
 
-Anything else is later.
+## Phase 2 guardrails
 
-Avoid until the MVP works:
+Exploratory frontend work is allowed when it preserves the full working MVP path.
 
-- Animation
-- Rich visual design
-- Routing complexity
-- Global state libraries
-- Unlockable levels
-- Detailed educational pages
-- Thesis background pages
-- Charts
-- Audio playback
-- Admin UI
-- Complex error UX
-- Deployment work
+Allowed Phase 2 work:
 
-## Backend assumptions
+- improve mobile-first layout
+- improve player-facing language
+- replace laboratory wording such as "stimulus" with "word", "sound", "card", "ideophone", or "round"
+- improve game feel and visual identity
+- improve feedback so non-Japanese readers can understand what they selected
+- improve research notes, as long as claims remain cautious
+- refine Script Lab presentation
+- use React as the source of visible script/placeholder presentation
+- keep legacy `.mp4` assets as playback sources rather than visual authority
+- add small vertical slices for future game modes after API contract review
 
-Expected backend development origin:
+Still avoid:
+
+- broad rewrites without a vertical-slice goal
+- frontend-only correctness or scoring
+- arbitrary difficulty controls
+- unsupported backend condition values
+- `TEXT_ONLY` as a player-selectable mode
+- large asset migrations without a separate asset-pipeline task
+- new backend endpoint assumptions not documented in `docs/backend-contract.md`
+- adding libraries before proving the current stack is insufficient
+
+## Current Script Lab contract
+
+The frontend may expose exactly these condition choices:
 
 ```text
-http://localhost:8080
+Audio only      -> CONDITION_1_SOKUON
+Script match    -> CONDITION_2_SOKUON
+Script mismatch -> CONDITION_3_SOKUON
 ```
 
-Expected frontend development origin:
+The frontend must keep:
+
+```json
+{
+  "difficultyLevel": 1
+}
+```
+
+Do not expose arbitrary difficulty selection.
+
+Do not expose numeric condition values.
+
+Do not expose `TEXT_ONLY`.
+
+## Presentation rules
+
+Do not let legacy `.mp4` video tracks define visible game presentation.
+
+The preferred model is:
 
 ```text
-http://localhost:5173
+StimulusPlayback  -> plays or preloads audio/media
+StimulusDisplay   -> renders visible card/placeholder/script
+conditionPresentation.ts -> maps backend condition enum to presentation behavior
 ```
 
-Expected API shape unless the backend already differs:
+The backend `kana` field alone is not display-script authority.
+
+Visible script should be derived from:
+
+- the ideophone data available from the backend
+- `canonicalScript`
+- current Script Lab condition
+- pre-answer vs post-answer state
+
+Audio-only:
+
+- before answer: show neutral A/B placeholders
+- after answer: reveal canonical display form, romaji, and meaning
+
+Script match:
+
+- before answer: render canonical script
+
+Script mismatch:
+
+- before answer: render the opposite script
+
+Unknown condition or unknown script:
+
+- use a safe fallback
+- do not crash the round
+
+## Player-facing wording
+
+Avoid unnecessarily clinical laboratory wording in visible UI.
+
+Prefer:
+
+- round
+- word
+- sound
+- ideophone
+- card
+- choice
+
+Avoid in player-facing text unless deliberately framed as science/logbook flavor:
+
+- stimulus
+- trial
+- condition
+- subject
+- response variable
+
+The main question should be close to:
+
+```text
+Which word do you think means "<translation>"?
+```
+
+Feedback should help non-Japanese readers. It should identify:
+
+- selected side A/B
+- selected display form
+- selected romaji
+- selected meaning
+- correct side A/B
+- correct display form
+- correct romaji
+- correct meaning
+
+## Mobile-first expectation
+
+Treat mobile layout as important, not optional polish.
+
+Responsive requirements:
+
+- cards should stack cleanly on narrow screens
+- answer targets should be touch-friendly
+- progress should remain readable
+- feedback should be readable without awkward scrolling where practical
+- primary action buttons such as "Next round" should be centered and easy to tap
+
+## Updated proof expectations
+
+A frontend change is complete only with at least one relevant proof:
+
+```text
+npm run lint
+npm run build
+manual browser proof
+node scripts/verify-browser-loop.mjs, if CDP is available
+written blocker with exact error
+```
+
+If CDP is unavailable, do not route around approval limits. Report that CDP is unavailable and provide manual browser checks.
+
+Manual checks for Script Lab/presentation work:
+
+- Audio only starts and uses A/B placeholders before answer.
+- Feedback reveals canonical script, romaji, and meaning.
+- Script match starts and renders canonical script.
+- Script mismatch starts and renders opposite script.
+- No difficulty selector is visible.
+- No `TEXT_ONLY` option is visible.
+- Feedback remains readable.
+- Progress updates.
+- Mobile/narrow layout is not obviously broken.
+
+## Required reading before code changes
+
+Before changing implementation code, inspect these files:
+
+```text
+docs/project_guidelines.md
+docs/backend-contract.md
+docs/frontend-grading-checklist.md
+README.md
+package.json
+```
+
+Use `docs/backend-contract.md` as the API authority.
+
+Use `docs/frontend-grading-checklist.md` as the browser/demo readiness checklist.
+
+If backend behavior and frontend behavior differ, do not guess. Inspect the backend contract or ask for the current backend DTO/endpoint.
+
+## Current local contract
+
+Backend base URL:
+
+```text
+http://localhost:8081
+```
+
+Frontend development origin:
+
+```text
+http://localhost:5174
+```
+
+Frontend environment variable:
+
+```text
+VITE_API_BASE_URL=http://localhost:8081
+```
+
+Expected API contract:
 
 ```text
 POST /api/auth/register
 POST /api/auth/login
 
-GET  /api/rounds/next
-POST /api/rounds/{roundId}/answer
+POST /api/game/sessions
+GET  /api/game/sessions/{sessionUuid}/rounds/next
+POST /api/game/sessions/{sessionUuid}/answers
 
-GET  /api/me/attempts
 GET  /api/leaderboard
+GET  /api/game/me/attempts
+
+GET  /stimuli/**
 ```
 
-Protected requests must include:
+Protected requests require:
 
 ```text
 Authorization: Bearer <token>
 ```
 
-Do not invent frontend endpoints. Match the backend.
-
-## Implementation rules
-
-Keep the app small.
-
-Prefer one `api.ts` module for fetch logic.
-
-Centralize token handling.
-
-Do not duplicate Authorization header logic in every component.
-
-Use TypeScript types for API request and response shapes.
-
-Handle non-2xx responses visibly enough for a demo.
-
-Do not build frontend state that the backend should own.
-
-Do not bypass CORS by relying only on a Vite proxy. Backend CORS must still be configured explicitly.
-
-## Suggested file structure
-
-Use existing structure if present. If still close to the Vite template, this is enough:
+Do not reintroduce stale endpoint paths such as:
 
 ```text
-src/
-  api.ts
-  App.tsx
-  main.tsx
-  types.ts
-  components/
-    LoginForm.tsx
-    RoundView.tsx
-    Leaderboard.tsx
+/api/rounds/next
+/api/rounds/{roundId}/answer
+/api/me/attempts
 ```
 
-Avoid deep architecture.
+unless `docs/backend-contract.md` has been intentionally changed.
 
-## API helper target
+Do not reintroduce stale backend port assumptions such as:
 
-Prefer a minimal helper like this pattern:
+```text
+http://localhost:8080
+```
 
-```ts
-const API_BASE_URL =
-  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080";
+## Stack
 
-export async function apiFetch(path: string, options: RequestInit = {}) {
-  const token = localStorage.getItem("token");
+Use the existing stack:
 
-  const response = await fetch(`${API_BASE_URL}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options.headers,
-    },
-  });
+```text
+React
+Vite
+TypeScript
+CSS already present in the repo
+```
 
-  if (response.status === 401) {
-    localStorage.removeItem("token");
-  }
+## Current repository shape
 
-  return response;
+Important current paths include:
+
+```text
+src/api/
+src/components/
+src/pages/
+src/styles/
+scripts/verify-browser-loop.mjs
+public/stimuli
+stimuli/
+docs/
+```
+
+The repo contains large project resources and stimuli. Treat these as assets, not as code to reorganize casually.
+
+Do not edit generated build output under:
+
+```text
+dist/
+```
+
+unless explicitly inspecting a production build.
+
+Do not duplicate large media files unless the task is specifically about asset packaging.
+
+The preferred contract is backend-served `/stimuli/**`. If the frontend also serves local stimuli for development, keep that behavior documented and do not make it contradict the backend contract.
+
+## MVP browser flow
+
+The frontend must support this flow:
+
+1. Register or log in.
+2. Store the JWT locally.
+3. Send bearer token on protected API requests.
+4. Start a game session.
+5. Fetch the next round.
+6. Show fixation and ideophone stimulus sequence.
+7. Show two choices.
+8. Submit the selected ideophone.
+9. Show backend-provided feedback.
+10. Continue until completion.
+11. Show a completion state.
+12. Show leaderboard or recent attempts.
+
+Current safe demo request:
+
+```json
+{
+  "conditionName": "CONDITION_1_SOKUON",
+  "difficultyLevel": 1
 }
 ```
 
-Do not overbuild auth. For the MVP, `localStorage` is acceptable.
+Do not expose arbitrary difficulty input.
 
-## Environment variables
+Do not expose condition selection unless every selectable value maps to a backend-supported enum and the backend has seeded rounds for it.
 
-If needed, use:
+## API implementation rules
+
+Centralize API calls in `src/api/`.
+
+Centralize token handling.
+
+Do not duplicate bearer-header construction across components.
+
+Use TypeScript request and response types that match the backend DTOs.
+
+Handle non-2xx responses visibly enough for demo use.
+
+No failed request should leave the UI in an infinite spinner.
+
+Do not build frontend-only game authority. The backend owns:
 
 ```text
-VITE_API_BASE_URL=http://localhost:8080
+session identity
+round identity
+valid choices
+correctness
+answer storage
+leaderboard/history data
 ```
 
-Do not commit secrets. The frontend should not contain JWT secrets or database credentials.
+The frontend may own:
+
+```text
+view state
+local loading state
+local error display
+local presentation sequence
+session-local UI progress labels
+```
+
+If displayed totals are backend cumulative totals, label them honestly. Do not present all-time totals as session-local progress.
+
+## Authentication rules
+
+Registration and login must call backend endpoints.
+
+JWT may be stored in `localStorage` for this course MVP.
+
+On logout, clear token and authenticated state.
+
+On `401`, clear invalid auth state or return the user to login.
+
+Never display or store password data beyond the login/register request.
+
+Do not include JWT secrets or database credentials in frontend code.
+
+## Game-loop rules
+
+The trial flow should remain small and API-driven.
+
+Expected presentation:
+
+1. Fixation.
+2. Left ideophone/stimulus.
+3. Right ideophone/stimulus.
+4. Both options visible.
+5. User selects one option.
+6. Submit answer.
+7. Feedback appears.
+8. Continue.
+
+Do not redesign the experiment flow unless explicitly requested.
+
+Completion must be a normal UI state, not an error-looking crash.
+
+The completion screen should remain visible until explicit restart.
+
+Restart must create a fresh backend session.
+
+## Error-handling minimum
+
+The UI must show a visible state for:
+
+```text
+login failure
+registration failure
+missing/expired token
+session-start failure
+round-fetch failure
+answer-submit failure
+stimulus/media failure
+session completion
+empty leaderboard/history
+```
+
+Plain text errors are acceptable.
+
+Polished error UX is not required.
+
+Never hide failures behind endless loading.
 
 ## Development commands
 
-From repo root:
+From repository root:
 
 ```sh
 npm install
+```
+
+```sh
 npm run dev
 ```
 
-For a production check:
+Build proof:
 
 ```sh
 npm run build
 ```
 
-Only add or change scripts if the existing `package.json` requires it.
-
-## Proof requirement
-
-Every meaningful frontend change must end with at least one proof:
+Lint proof, if available:
 
 ```sh
-npm run build
+npm run lint
 ```
 
-or a browser demo step such as:
+Browser proof target:
 
 ```text
-Open http://localhost:5173
+http://localhost:5174
+```
+
+Automated/browser-loop helper, if applicable:
+
+```sh
+node scripts/verify-browser-loop.mjs
+```
+
+Since the current environment is WSL, browsers like Microsoft Edge and Firefox are located under `/mnt/c/`.
+
+Inspect `package.json` before assuming script names.
+
+## Manual browser proof
+
+A frontend change is not complete until at least one relevant proof is recorded.
+
+Preferred full proof:
+
+```text
+1. Start backend on http://localhost:8081.
+2. Start frontend on http://localhost:5174.
+3. Open http://localhost:5174.
+4. Register a fresh user.
+5. Log in or confirm register-auto-login.
+6. Start a session.
+7. Confirm request body uses conditionName CONDITION_1_SOKUON and difficultyLevel 1.
+8. Complete at least one full trial.
+9. Confirm answer feedback appears.
+10. Continue to completion.
+11. Confirm completion screen remains visible.
+12. Confirm leaderboard or recent attempts are visible.
+13. Confirm no stale condition/difficulty controls appear.
+```
+
+Short proof for smaller changes:
+
+```text
+Open http://localhost:5174
 Log in
-Fetch a round
-Submit an answer
+Start session
+Submit answer
 See feedback
 ```
 
-If the backend is unavailable, write the exact blocker instead of building mock systems.
+## Documentation rules
 
-## Error handling for demo
+When endpoint paths, request/response shapes, ports, auth behavior, media behavior, or completion handling change, update:
 
-Minimum acceptable behavior:
+```text
+docs/backend-contract.md
+docs/frontend-grading-checklist.md
+README.md
+```
 
-- Login failure shows a message.
-- Missing or expired token sends the user back to login state.
-- Failed round fetch shows a message.
-- Failed answer submission shows a message.
-- Successful answer submission shows correct/incorrect feedback.
+Do not let docs drift back to:
 
-Do not spend time on polished copy.
+```text
+localhost:8080
+/api/rounds/next
+```
 
-## Styling
+unless clearly marked as historical or old examples.
 
-Keep styling minimal and readable.
+## Agent completion rule
 
-Do not spend time on themes, fonts, animations, layouts, icons, or responsive polish before the complete backend-to-frontend loop works.
+A frontend change is not complete until the response includes:
 
-## When editing existing code
+1. What changed.
+2. Why it was necessary.
+3. What files were changed.
+4. A proof command or browser proof.
+5. Any backend dependency or blocker.
+6. The next single task.
 
-First inspect current files.
+At least one of these must exist before claiming success:
 
-Do not rewrite the whole app unless it is still the default Vite template and replacement is smaller than patching it.
+```text
+passing npm run build
+passing npm run lint, if available
+successful browser proof
+successful verify-browser-loop script result
+updated checklist item with evidence
+commit hash
+written blocker with exact error output
+```
 
-Prefer small changes that make one demo step work.
+Do not claim a flow works without a browser proof or a clearly relevant automated proof.
 
-After a change, state:
+## Current known risks to check first
 
-1. What changed
-2. How to run it
-3. How to prove it works
-4. What backend dependency remains, if any
+Before broad work, verify:
 
-## Hard rule
-
-The frontend exists to demonstrate the backend. If a task does not help the user register/login, play one round, submit one answer, and see stored score/history/leaderboard data, defer it.
+```text
+the running browser app is current source, not stale Vite state
+backend URL is 8081
+frontend URL is 5174
+difficulty is locked to 1
+condition is CONDITION_1_SOKUON
+completion screen stays visible
+leaderboard or recent attempts are visible
+progress labels are not misleading
+no stale condition/difficulty controls are visible
+```

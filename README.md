@@ -64,6 +64,10 @@ Stimulus playback is separated from visible presentation. Legacy `.mp4` files
 may still provide sound, but React renders the visible audio placeholder or
 script layer through the condition presentation boundary.
 
+Script Lab selection is available before session start with exactly three
+backend-supported presentation options: Audio only, Script match, and Script
+mismatch. The default remains Audio only, and difficulty remains fixed at `1`.
+
 Remaining blocker: none for the frontend demo path while the backend is running
 on port `8081`.
 
@@ -72,14 +76,16 @@ Browser path:
 1. Open `http://localhost:5174`.
 2. Register or log in.
 3. Run the sound check.
-4. Start New Game.
-5. Watch the fixation, left stimulus, right stimulus, and choice phase.
-6. Choose one ideophone.
-7. Confirm backend feedback and the research note stay visible.
-8. Click `Next trial` to continue.
-9. Finish the session and see the completion summary.
-10. Use the completion tabs for leaderboard or recent attempts.
-11. Start a new game and confirm the demo setup resets cleanly.
+4. Keep Audio only selected, or select Script match / Script mismatch for the
+   supported Script Lab presentation comparison.
+5. Start Game.
+6. Watch the fixation, left stimulus, right stimulus, and choice phase.
+7. Choose one ideophone.
+8. Confirm backend feedback and the research note stay visible.
+9. Click `Next trial` to continue.
+10. Finish the session and see the completion summary.
+11. Use the completion tabs for leaderboard or recent attempts.
+12. Start a new game and confirm the demo setup resets cleanly.
 
 ## Scripts
 

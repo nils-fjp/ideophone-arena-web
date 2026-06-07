@@ -284,6 +284,7 @@ async function run() {
     async () => (await bodyText(ws)).includes("Choosing Task Instructions"),
     "instructions after register",
   );
+  await assertScriptLabSelector(ws);
   if (!(await trustedClickText(ws, "Sound check"))) {
     throw new Error("Sound check button not found");
   }
@@ -300,7 +301,9 @@ async function run() {
 
   const sessionBody = sessionRequests[0]?.postData ?? "";
   if (!sessionBody.includes('"conditionName":"CONDITION_1_SOKUON"')) {
-    throw new Error(`Session request did not send CONDITION_1_SOKUON: ${sessionBody}`);
+    throw new Error(
+      `Default session request did not send CONDITION_1_SOKUON: ${sessionBody}`,
+    );
   }
   if (!sessionBody.includes('"difficultyLevel":1')) {
     throw new Error(`Session request did not send difficultyLevel 1: ${sessionBody}`);
@@ -474,6 +477,83 @@ async function waitForSessionRequest() {
     () => sessionRequests.length > 0,
     "POST /api/game/sessions request",
   );
+}
+
+async function assertScriptLabSelector(ws) {
+  const selectorProof = await evaluate(
+    ws,
+    `(() => {
+      const text = document.body.innerText;
+      const controls = [...document.querySelectorAll("button, input, select, textarea")];
+      return {
+        hasAudioOnly: text.includes("Audio only"),
+        hasScriptMatch: text.includes("Script match"),
+        hasScriptMismatch: text.includes("Script mismatch"),
+        hasTextOnly: text.includes("TEXT_ONLY"),
+        visibleEnumName: /CONDITION_[0-9]+_SOKUON/.test(text),
+        difficultyControls: controls
+          .map((control) => [
+            control.textContent,
+            control.getAttribute("aria-label"),
+            control.getAttribute("name"),
+            control.getAttribute("id"),
+            control.closest("label")?.textContent
+          ].filter(Boolean).join(" "))
+          .filter((label) => /difficulty/i.test(label)),
+        activeLabel: [...document.querySelectorAll("button[aria-pressed='true']")]
+          .map((button) => button.textContent.trim())
+          .find((label) =>
+            label.includes("Audio only") ||
+            label.includes("Script match") ||
+            label.includes("Script mismatch")
+          ) ?? "",
+      };
+    })()`,
+  );
+
+  if (!selectorProof.hasAudioOnly) {
+    throw new Error("Script Lab selector is missing Audio only");
+  }
+  if (!selectorProof.hasScriptMatch) {
+    throw new Error("Script Lab selector is missing Script match");
+  }
+  if (!selectorProof.hasScriptMismatch) {
+    throw new Error("Script Lab selector is missing Script mismatch");
+  }
+  if (selectorProof.hasTextOnly) {
+    throw new Error("Script Lab selector exposed TEXT_ONLY");
+  }
+  if (selectorProof.visibleEnumName) {
+    throw new Error("Script Lab selector exposed backend enum names in visible text");
+  }
+  if (
+    Array.isArray(selectorProof.difficultyControls) &&
+    selectorProof.difficultyControls.length > 0
+  ) {
+    throw new Error(
+      `Difficulty controls are visible: ${selectorProof.difficultyControls.join(", ")}`,
+    );
+  }
+  if (!selectorProof.activeLabel.includes("Audio only")) {
+    throw new Error(
+      `Default Script Lab option should be Audio only: ${selectorProof.activeLabel}`,
+    );
+  }
+
+  for (const label of ["Script match", "Script mismatch", "Audio only"]) {
+    if (!(await clickText(ws, label))) {
+      throw new Error(`Could not select Script Lab option: ${label}`);
+    }
+    await waitFor(
+      () =>
+        evaluate(
+          ws,
+          `(() => [...document.querySelectorAll("button[aria-pressed='true']")]
+            .some((button) => button.textContent.includes(${JSON.stringify(label)})))()`,
+        ),
+      `Script Lab option ${label} selected`,
+    );
+  }
 }
 
 async function answerCurrentRound(ws, expectFixation) {

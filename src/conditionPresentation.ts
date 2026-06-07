@@ -8,6 +8,30 @@ export type ConditionPresentation = {
   description: string;
 };
 
+export type ScriptLabConditionOption = {
+  conditionName: ConditionName;
+  label: string;
+  explanation: string;
+};
+
+export const SCRIPT_LAB_CONDITION_OPTIONS: ScriptLabConditionOption[] = [
+  {
+    conditionName: "CONDITION_1_SOKUON",
+    label: "Audio only",
+    explanation: "Focus on sound, no script cue.",
+  },
+  {
+    conditionName: "CONDITION_2_SOKUON",
+    label: "Script match",
+    explanation: "Visible script follows the ideophone's canonical script.",
+  },
+  {
+    conditionName: "CONDITION_3_SOKUON",
+    label: "Script mismatch",
+    explanation: "Visible script intentionally conflicts with the canonical script.",
+  },
+];
+
 export function getConditionPresentation(
   conditionName: ConditionName | string | undefined,
 ): ConditionPresentation {
@@ -16,19 +40,19 @@ export function getConditionPresentation(
       return {
         kind: "audio-only",
         label: "Audio only",
-        description: "React renders a neutral placeholder while legacy media supplies sound.",
+        description: "Focus on sound, no script cue.",
       };
     case "CONDITION_2_SOKUON":
       return {
         kind: "script",
         label: "Script match",
-        description: "React renders the intended script instead of trusting media visuals.",
+        description: "Visible script follows the ideophone's canonical script.",
       };
     case "CONDITION_3_SOKUON":
       return {
         kind: "script",
         label: "Script mismatch",
-        description: "React renders script deliberately when mismatch data is present.",
+        description: "Visible script intentionally conflicts with the canonical script.",
       };
     default:
       return {

@@ -9,6 +9,7 @@ import {
 import type {
   AnswerResultResponse,
   AuthResponse,
+  ConditionName,
   GameSessionResponse,
   RoundResponse,
   StartSessionRequest,
@@ -20,10 +21,8 @@ import TrialPlayer from "./components/TrialPlayer";
 
 const USERNAME_STORAGE_KEY = "ideophone-arena-username";
 const ROLE_STORAGE_KEY = "ideophone-arena-role";
-const DEMO_SESSION_REQUEST: StartSessionRequest = {
-  difficultyLevel: 1,
-  conditionName: "CONDITION_1_SOKUON",
-};
+const DEMO_DIFFICULTY_LEVEL = 1;
+const DEFAULT_SCRIPT_LAB_CONDITION: ConditionName = "CONDITION_1_SOKUON";
 const DEMO_TOTAL_ROUNDS = 30;
 
 type AuthState = {
@@ -79,6 +78,9 @@ export default function App() {
   const [soundCheckError, setSoundCheckError] = useState("");
   const [completionScoreView, setCompletionScoreView] =
     useState<CompletionScoreView>("leaderboard");
+  const [selectedCondition, setSelectedCondition] = useState<ConditionName>(
+    DEFAULT_SCRIPT_LAB_CONDITION,
+  );
 
   function handleAuthenticated(response: AuthResponse) {
     setAuthToken(response.token);
@@ -107,6 +109,7 @@ export default function App() {
     setSessionStats(EMPTY_SESSION_STATS);
     setScoreRefreshKey(0);
     setCompletionScoreView("leaderboard");
+    setSelectedCondition(DEFAULT_SCRIPT_LAB_CONDITION);
   }, []);
 
   const handleBackToStart = useCallback(() => {
@@ -193,7 +196,11 @@ export default function App() {
     setCompletionScoreView("leaderboard");
 
     try {
-      const createdSession = await startSession(DEMO_SESSION_REQUEST);
+      const sessionRequest: StartSessionRequest = {
+        difficultyLevel: DEMO_DIFFICULTY_LEVEL,
+        conditionName: selectedCondition,
+      };
+      const createdSession = await startSession(sessionRequest);
       setSession(createdSession);
       setView("game");
       await loadNextRound(createdSession.sessionUuid);
@@ -246,10 +253,13 @@ export default function App() {
     if (view === "instructions") {
       return (
         <Instructions
+          difficultyLevel={DEMO_DIFFICULTY_LEVEL}
           error={error}
           isStarting={isStarting}
+          selectedCondition={selectedCondition}
           soundCheckError={soundCheckError}
           soundCheckStatus={soundCheckStatus}
+          onConditionChange={setSelectedCondition}
           onSoundCheck={() => void handleSoundCheck()}
           onStart={handleStart}
         />

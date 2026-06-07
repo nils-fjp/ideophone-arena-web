@@ -89,14 +89,15 @@ Browser proof:
 
 - [x] Start session calls `POST /api/game/sessions`.
 - [x] Request body sends backend enum names, not numeric labels.
-- [x] Current demo sends `conditionName: "CONDITION_1_SOKUON"`.
-- [x] Current demo sends `difficultyLevel: 1`.
+- [x] Default demo sends `conditionName: "CONDITION_1_SOKUON"`.
+- [x] Script Lab selector maps exactly Audio only, Script match, and Script mismatch to the three backend-supported sokuon enum names.
+- [x] Session start always sends `difficultyLevel: 1`.
 - [x] Unsupported arbitrary difficulty input is not exposed.
-- [x] Unsupported condition selector is not exposed unless fully mapped to backend enum values.
+- [x] TEXT_ONLY and unsupported condition values are not exposed.
 - [x] Session UUID from backend is stored in local component/application state.
 - [x] Session start failure displays an error.
 
-Expected request:
+Default expected request:
 
 ```json
 {
@@ -108,10 +109,12 @@ Expected request:
 Proof:
 
 ```text
-Browser devtools Network tab shows POST /api/game/sessions with conditionName CONDITION_1_SOKUON and difficultyLevel 1.
+Browser devtools Network tab shows POST /api/game/sessions with the selected Script Lab conditionName and difficultyLevel 1. Default Audio only sends CONDITION_1_SOKUON.
 ```
 
 2026-06-05 evidence: `node scripts/verify-browser-loop.mjs` recorded `POST http://127.0.0.1:5174/api/game/sessions` with body `{"difficultyLevel":1,"conditionName":"CONDITION_1_SOKUON"}`. No condition or difficulty form controls were detected.
+
+2026-06-07 source update: the start screen exposes a small Script Lab selector for Audio only, Script match, and Script mismatch. The selector uses user-facing labels, not backend enum names or numeric values, and session start still hardcodes difficulty level `1`.
 
 ## Trial/game loop
 
@@ -155,7 +158,7 @@ Browser proof:
 6. Continue to another round.
 ```
 
-2026-06-05 evidence: browser proof answered 30 rounds as `browser_loop_1780627390120`. First round choices were `Select gosogoso` and `Select katakata`; selected `Select gosogoso`; backend feedback was visible as `Correct`. The helper required and passed the pre-game sound check, auto-advanced through completion, and exited successfully. A live CDP DOM check on the updated trial tab showed two translation lines stacked vertically with the same left position and width, two fixed-size stimulus cards, zero muted stimulus media elements, and no `.kana-text` overlays.
+2026-06-05 evidence: browser proof answered 30 rounds as `browser_loop_1780627390120`. First round choices were `Select gosogoso` and `Select katakata`; selected `Select gosogoso`; backend feedback was visible as `Correct`. The helper required and passed the pre-game sound check, continued through completion, and exited successfully. A live CDP DOM check on the updated trial tab showed two translation lines stacked vertically with the same left position and width, two fixed-size stimulus cards, zero muted stimulus media elements, and no `.kana-text` overlays.
 
 2026-06-07 source update: feedback now stays visible with the research note until a manual `Next trial` click. The browser-loop helper was updated to assert that behavior before continuing.
 
@@ -201,7 +204,7 @@ Browser proof:
 5. Confirm a new session starts cleanly.
 ```
 
-2026-06-05 evidence: browser proof reached completion after 30 answered rounds and confirmed `Session complete` remained visible with leaderboard/recent attempts still visible. `src/App.tsx` resets session-local state before each `startSession(DEMO_SESSION_REQUEST)` call.
+2026-06-05 evidence: browser proof reached completion after 30 answered rounds and confirmed `Session complete` remained visible with leaderboard/recent attempts still visible. `src/App.tsx` resets session-local state before each session start.
 
 ## Progress and score display
 
@@ -329,7 +332,7 @@ Frontend command: /code/js/ideophone-arena-web npm run dev
 Browser URL: http://127.0.0.1:5174/ in Windows Edge 148 via CDP 127.0.0.1:9224
 Test user: browser_loop_1780626198096
 Updated audio proof user: browser_loop_1780627390120
-Result: PASS. Registered fresh user, passed the sound check, started CONDITION_1_SOKUON difficulty 1 session, answered 30 rounds, saw feedback, auto-advanced without a Next button, reached persistent completion, saw leaderboard and recent attempts, observed 360 /stimuli/ requests with 360 successful stimulus responses, observed 0 muted stimulus media elements, observed 95 successful protected /api/game responses, found 0 stale condition/difficulty controls, saw 0 failed requests, and saw 0 relevant browser console errors.
+Result: PASS. Registered fresh user, passed the sound check, started CONDITION_1_SOKUON difficulty 1 session, answered 30 rounds, saw feedback, reached persistent completion, saw leaderboard and recent attempts, observed 360 /stimuli/ requests with 360 successful stimulus responses, observed 0 muted stimulus media elements, observed 95 successful protected /api/game responses, found 0 stale condition/difficulty controls, saw 0 failed requests, and saw 0 relevant browser console errors.
 Blocker: none for the frontend browser demo while backend 8081 and frontend 5174 are running.
 Next task: verify backend round seed/pairing semantics against the experiment design so canonical/opposite modality pairings are not left to frontend display assumptions.
 ```
@@ -358,7 +361,7 @@ Update this section after each pass.
 
 - [x] Verify the running browser app is current source, not stale Vite/runtime state.
 - [x] Verify no arbitrary difficulty input is visible.
-- [x] Verify current condition is sent as `CONDITION_1_SOKUON`.
+- [x] Verify default condition is sent as `CONDITION_1_SOKUON`.
 - [x] Verify completion screen remains visible.
 - [x] Verify leaderboard/recent attempts are visible enough.
 - [x] Verify progress labels are not misleading.
