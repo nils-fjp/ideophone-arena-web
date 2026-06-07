@@ -5,16 +5,15 @@ import type {
   GameSessionResponse,
   LeaderboardEntry,
   LoginRequest,
+  NextRoundResponse,
   RegisterRequest,
-  RoundResponse,
   StartSessionRequest,
   SubmitAnswerRequest,
 } from "./types";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(
-  /\/$/,
-  "",
-);
+const API_BASE_URL = (
+  String(import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8081").trim()
+).replace(/\/$/, "");
 
 const TOKEN_STORAGE_KEY = "ideophone-arena-token";
 
@@ -52,6 +51,46 @@ export function clearAuthToken() {
 
 function apiUrl(path: string) {
   return `${API_BASE_URL}${path}`;
+}
+
+export function backendUrl(path: string) {
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+
+  const normalizedPath = path.startsWith("/") ? path : `/${path}`;
+  return `${API_BASE_URL}${normalizedPath}`;
+}
+
+export async function fetchBackendBlob(path: string) {
+  const token = getAuthToken();
+  const headers = new Headers();
+
+  if (token) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(backendUrl(path), { headers });
+  } catch (caught) {
+    throw new ApiError(
+      0,
+      `Backend unavailable at ${API_BASE_URL || "the Vite proxy"}`,
+      caught,
+    );
+  }
+
+  if (!response.ok) {
+    const parsed = await parseBody(response);
+    throw new ApiError(
+      response.status,
+      errorMessage(response.status, parsed, response.statusText),
+      parsed,
+    );
+  }
+
+  return response.blob();
 }
 
 function errorMessage(status: number, body: unknown, fallbackText: string) {
@@ -103,11 +142,21 @@ async function apiRequest<T>(
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const response = await fetch(apiUrl(path), {
-    method: options.method ?? "GET",
-    headers,
-    body: options.body === undefined ? undefined : JSON.stringify(options.body),
-  });
+  let response: Response;
+  try {
+    response = await fetch(apiUrl(path), {
+      method: options.method ?? "GET",
+      headers,
+      body:
+        options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+  } catch (caught) {
+    throw new ApiError(
+      0,
+      `Backend unavailable at ${API_BASE_URL || "the Vite /api proxy"}`,
+      caught,
+    );
+  }
 
   const parsed = await parseBody(response);
 
@@ -136,7 +185,7 @@ export function login(request: LoginRequest) {
   });
 }
 
-export function startSession(request: StartSessionRequest = {}) {
+export function startSession(request: StartSessionRequest) {
   return apiRequest<GameSessionResponse>("/api/game/sessions", {
     method: "POST",
     body: request,
@@ -144,7 +193,7 @@ export function startSession(request: StartSessionRequest = {}) {
 }
 
 export function getNextRound(sessionUuid: string) {
-  return apiRequest<RoundResponse>(
+  return apiRequest<NextRoundResponse>(
     `/api/game/sessions/${encodeURIComponent(sessionUuid)}/rounds/next`,
   );
 }

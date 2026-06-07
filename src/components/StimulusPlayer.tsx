@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { fetchBackendBlob } from "../api/client";
 
 const FALLBACK_DURATION_MS = 1200;
 
 type StimulusPlayerProps = {
   src?: string;
-  visible: boolean;
+  playing: boolean;
   autoplayToken?: number;
   onEnded?: () => void;
   onError?: (message: string) => void;
@@ -12,21 +13,77 @@ type StimulusPlayerProps = {
 
 export default function StimulusPlayer({
   src,
-  visible,
+  playing,
   autoplayToken,
   onEnded,
   onError,
 }: StimulusPlayerProps) {
   const mediaRef = useRef<HTMLAudioElement | HTMLVideoElement | null>(null);
   const finishedRef = useRef(false);
-  const [blockedMessage, setBlockedMessage] = useState("");
+  const onEndedRef = useRef(onEnded);
+  const onErrorRef = useRef(onError);
+  const [loadedMedia, setLoadedMedia] = useState<{
+    source?: string;
+    objectUrl: string;
+    error: string;
+  }>({ objectUrl: "", error: "" });
+  const [blockedPlayback, setBlockedPlayback] = useState<{
+    token?: number;
+    message: string;
+  }>({ message: "" });
   const isVideo = useMemo(() => /\.(mp4|webm|ogg)$/i.test(src ?? ""), [src]);
+  const mediaSrc = loadedMedia.source === src ? loadedMedia.objectUrl : "";
+  const mediaLoadError = loadedMedia.source === src ? loadedMedia.error : "";
+  const blockedMessage =
+    blockedPlayback.token === autoplayToken ? blockedPlayback.message : "";
+
+  useEffect(() => {
+    onEndedRef.current = onEnded;
+    onErrorRef.current = onError;
+  }, [onEnded, onError]);
+
+  useEffect(() => {
+    let isMounted = true;
+    let objectUrl = "";
+
+    if (!src) {
+      return undefined;
+    }
+
+    fetchBackendBlob(src)
+      .then((blob) => {
+        if (!isMounted) {
+          return;
+        }
+        objectUrl = URL.createObjectURL(blob);
+        setLoadedMedia({ source: src, objectUrl, error: "" });
+      })
+      .catch((caught) => {
+        if (!isMounted) {
+          return;
+        }
+        setLoadedMedia({
+          source: src,
+          objectUrl: "",
+          error:
+            caught instanceof Error
+              ? caught.message
+              : "Stimulus media failed to load",
+        });
+      });
+
+    return () => {
+      isMounted = false;
+      if (objectUrl) {
+        URL.revokeObjectURL(objectUrl);
+      }
+    };
+  }, [src]);
 
   useEffect(() => {
     finishedRef.current = false;
-    setBlockedMessage("");
 
-    if (!visible || autoplayToken === undefined) {
+    if (!playing || autoplayToken === undefined) {
       return undefined;
     }
 
@@ -40,18 +97,34 @@ export default function StimulusPlayer({
       if (fallbackId !== undefined) {
         window.clearTimeout(fallbackId);
       }
-      onEnded?.();
+      onEndedRef.current?.();
     }
 
     function scheduleFallback(message: string) {
-      console.error(message, { src });
-      onError?.(message);
+      console.warn(message, { src });
+      onErrorRef.current?.(message);
+      setBlockedPlayback({ token: autoplayToken, message });
       fallbackId = window.setTimeout(finish, FALLBACK_DURATION_MS);
+    }
+
+    function blockForManualPlayback(message: string) {
+      console.warn(message, { src });
+      onErrorRef.current?.(message);
+      setBlockedPlayback({ token: autoplayToken, message });
     }
 
     if (!src) {
       scheduleFallback("No stimulus source was provided");
       return () => window.clearTimeout(fallbackId);
+    }
+
+    if (mediaLoadError) {
+      scheduleFallback(mediaLoadError);
+      return () => window.clearTimeout(fallbackId);
+    }
+
+    if (!mediaSrc) {
+      return undefined;
     }
 
     const media = mediaRef.current;
@@ -67,15 +140,16 @@ export default function StimulusPlayer({
     media.addEventListener("ended", finish);
     media.addEventListener("error", handleMediaError);
     media.currentTime = 0;
+    media.muted = false;
+    media.defaultMuted = false;
+    media.volume = 1;
     const playPromise = media.play();
 
     if (playPromise !== undefined) {
       playPromise.catch((error: unknown) => {
         const message =
           error instanceof Error ? error.message : "Stimulus playback failed";
-        console.error("Stimulus playback failed", { src, error });
-        onError?.(message);
-        setBlockedMessage(message);
+        blockForManualPlayback(message);
       });
     }
 
@@ -87,7 +161,7 @@ export default function StimulusPlayer({
       media.removeEventListener("error", handleMediaError);
       media.pause();
     };
-  }, [autoplayToken, onEnded, onError, src, visible]);
+  }, [autoplayToken, mediaLoadError, mediaSrc, src, playing]);
 
   async function handleManualPlay() {
     const media = mediaRef.current;
@@ -95,15 +169,18 @@ export default function StimulusPlayer({
       return;
     }
 
-    setBlockedMessage("");
+    setBlockedPlayback({ token: autoplayToken, message: "" });
     try {
       media.currentTime = 0;
+      media.muted = false;
+      media.defaultMuted = false;
+      media.volume = 1;
       await media.play();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Stimulus playback failed";
-      setBlockedMessage(message);
-      onError?.(message);
+      setBlockedPlayback({ token: autoplayToken, message });
+      onErrorRef.current?.(message);
     }
   }
 
@@ -117,6 +194,10 @@ export default function StimulusPlayer({
     </button>
   ) : null;
 
+  if (!mediaSrc) {
+    return fallbackButton;
+  }
+
   if (isVideo) {
     return (
       <>
@@ -127,7 +208,7 @@ export default function StimulusPlayer({
           className="stimulus-media"
           playsInline
           preload="auto"
-          src={src}
+          src={mediaSrc}
         />
         {fallbackButton}
       </>
@@ -141,7 +222,7 @@ export default function StimulusPlayer({
           mediaRef.current = node;
         }}
         preload="auto"
-        src={src}
+        src={mediaSrc}
       />
       {fallbackButton}
     </>

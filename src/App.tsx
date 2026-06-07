@@ -7,9 +7,11 @@ import {
   startSession,
 } from "./api/client";
 import type {
+  AnswerResultResponse,
   AuthResponse,
   GameSessionResponse,
   RoundResponse,
+  StartSessionRequest,
 } from "./api/types";
 import AuthForm from "./components/AuthForm";
 import Instructions from "./components/Instructions";
@@ -18,6 +20,10 @@ import TrialPlayer from "./components/TrialPlayer";
 
 const USERNAME_STORAGE_KEY = "ideophone-arena-username";
 const ROLE_STORAGE_KEY = "ideophone-arena-role";
+const DEMO_SESSION_REQUEST: StartSessionRequest = {
+  difficultyLevel: 1,
+  conditionName: "CONDITION_1_SOKUON",
+};
 
 type AuthState = {
   username: string;
@@ -25,6 +31,17 @@ type AuthState = {
 };
 
 type AppView = "auth" | "instructions" | "game";
+type SoundCheckStatus = "idle" | "checking" | "ready" | "error";
+
+export type SessionStats = {
+  answered: number;
+  correct: number;
+};
+
+const EMPTY_SESSION_STATS: SessionStats = {
+  answered: 0,
+  correct: 0,
+};
 
 function readStoredAuth(): AuthState | null {
   const username = localStorage.getItem(USERNAME_STORAGE_KEY);
@@ -50,6 +67,14 @@ export default function App() {
   const [error, setError] = useState("");
   const [sessionComplete, setSessionComplete] = useState(false);
   const [scoreRefreshKey, setScoreRefreshKey] = useState(0);
+  const [latestResult, setLatestResult] = useState<AnswerResultResponse | null>(
+    null,
+  );
+  const [sessionStats, setSessionStats] =
+    useState<SessionStats>(EMPTY_SESSION_STATS);
+  const [soundCheckStatus, setSoundCheckStatus] =
+    useState<SoundCheckStatus>("idle");
+  const [soundCheckError, setSoundCheckError] = useState("");
 
   function handleAuthenticated(response: AuthResponse) {
     setAuthToken(response.token);
@@ -74,6 +99,19 @@ export default function App() {
     setRound(null);
     setError("");
     setSessionComplete(false);
+    setLatestResult(null);
+    setSessionStats(EMPTY_SESSION_STATS);
+    setScoreRefreshKey(0);
+  }, []);
+
+  const handleBackToStart = useCallback(() => {
+    setSession(null);
+    setRound(null);
+    setSessionComplete(false);
+    setLatestResult(null);
+    setSessionStats(EMPTY_SESSION_STATS);
+    setError("");
+    setView("instructions");
   }, []);
 
   const handleAuthExpired = useCallback(
@@ -91,6 +129,21 @@ export default function App() {
 
       try {
         const nextRound = await getNextRound(sessionUuid);
+        if (isCompletionPayload(nextRound)) {
+          setSession(null);
+          setRound(null);
+          setSessionComplete(true);
+          return;
+        }
+
+        if (!isPlayableRound(nextRound)) {
+          throw new ApiError(
+            422,
+            "The backend returned an invalid or unplayable round.",
+            nextRound,
+          );
+        }
+
         setRound(nextRound);
         setSessionComplete(false);
       } catch (caught) {
@@ -99,16 +152,16 @@ export default function App() {
           return;
         }
 
-        if (
-          caught instanceof ApiError &&
-          caught.status === 404 &&
-          /complete/i.test(caught.message)
-        ) {
+        if (isCompletionError(caught)) {
+          setSession(null);
           setRound(null);
           setSessionComplete(true);
           return;
         }
 
+        setSession(null);
+        setRound(null);
+        setSessionComplete(false);
         setError(caught instanceof Error ? caught.message : "Round failed to load");
       } finally {
         setIsLoadingRound(false);
@@ -118,12 +171,22 @@ export default function App() {
   );
 
   async function handleStart() {
+    if (soundCheckStatus !== "ready") {
+      setError("Run the sound check before starting the game.");
+      return;
+    }
+
     setIsStarting(true);
     setError("");
     setSessionComplete(false);
+    setLatestResult(null);
+    setSessionStats(EMPTY_SESSION_STATS);
+    setRound(null);
+    setSession(null);
+    setScoreRefreshKey(0);
 
     try {
-      const createdSession = await startSession();
+      const createdSession = await startSession(DEMO_SESSION_REQUEST);
       setSession(createdSession);
       setView("game");
       await loadNextRound(createdSession.sessionUuid);
@@ -139,8 +202,36 @@ export default function App() {
     }
   }
 
-  function handleAnswered() {
+  function handleAnswered(result: AnswerResultResponse) {
+    setLatestResult(result);
+    setSessionStats((current) => ({
+      answered: current.answered + 1,
+      correct: current.correct + (result.correct ? 1 : 0),
+    }));
     setScoreRefreshKey((key) => key + 1);
+  }
+
+  async function handleSoundCheck() {
+    setSoundCheckStatus("checking");
+    setSoundCheckError("");
+    setError("");
+
+    try {
+      await playSoundCheckTone();
+      setSoundCheckStatus("ready");
+    } catch (caught) {
+      setSoundCheckStatus("error");
+      setSoundCheckError(
+        caught instanceof Error ? caught.message : "Sound check failed",
+      );
+    }
+  }
+
+  function scrollToProgress(targetId: string) {
+    document.getElementById(targetId)?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
   }
 
   function renderMain() {
@@ -148,24 +239,68 @@ export default function App() {
       return <AuthForm onAuthenticated={handleAuthenticated} />;
     }
 
+    if (isStarting && !session) {
+      return <p className="status-text">Starting new game...</p>;
+    }
+
     if (view === "instructions") {
       return (
         <Instructions
           error={error}
           isStarting={isStarting}
+          soundCheckError={soundCheckError}
+          soundCheckStatus={soundCheckStatus}
+          onSoundCheck={() => void handleSoundCheck()}
           onStart={handleStart}
         />
       );
     }
 
     if (sessionComplete) {
+      const finalScore = `${sessionStats.correct} / ${sessionStats.answered}`;
+      const finalMessage = latestResult
+        ? latestResult.correct
+          ? "Last answer was correct."
+          : "Last answer was incorrect."
+        : "The session finished cleanly.";
+
       return (
         <section className="complete-panel">
           <h1>Session complete</h1>
-          <p>You have answered every playable round in this session.</p>
-          <button className="primary-button" type="button" onClick={handleStart}>
-            Start New Session
-          </button>
+          <p>{finalMessage}</p>
+
+          <dl className="completion-summary">
+            <dt>Session score</dt>
+            <dd>{finalScore}</dd>
+            <dt>Session answered</dt>
+            <dd>{sessionStats.answered}</dd>
+            <dt>Account total correct</dt>
+            <dd>{latestResult ? latestResult.totalCorrect : "Unavailable"}</dd>
+            <dt>Account total answered</dt>
+            <dd>{latestResult ? latestResult.totalAnswered : "Unavailable"}</dd>
+          </dl>
+
+          <div className="completion-actions">
+            <button className="primary-button" type="button" onClick={handleStart}>
+              Play again
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              onClick={() => scrollToProgress("leaderboard-title")}
+            >
+              View leaderboard
+            </button>
+            {auth ? (
+              <button
+                className="secondary-button"
+                type="button"
+                onClick={() => scrollToProgress("attempts-title")}
+              >
+                View my attempts
+              </button>
+            ) : null}
+          </div>
         </section>
       );
     }
@@ -177,12 +312,14 @@ export default function App() {
     if (session && round) {
       return (
         <TrialPlayer
-          key={round.roundId}
+          key={`${session.sessionUuid}:${round.roundId}`}
           round={round}
+          sessionStats={sessionStats}
           sessionUuid={session.sessionUuid}
           onAnswered={handleAnswered}
           onAuthExpired={handleAuthExpired}
           onNeedNextRound={() => void loadNextRound(session.sessionUuid)}
+          onBackToStart={handleBackToStart}
         />
       );
     }
@@ -192,9 +329,16 @@ export default function App() {
         <h1>Ready</h1>
         <p>Start a session to fetch the first round.</p>
         {error ? <p className="error-text centered">{error}</p> : null}
-        <button className="primary-button" type="button" onClick={handleStart}>
-          Start Game
-        </button>
+        <div className="completion-actions">
+          <button className="primary-button" type="button" onClick={handleStart}>
+            Start New Game
+          </button>
+          {error ? (
+            <button className="secondary-button" type="button" onClick={handleBackToStart}>
+              Back to start
+            </button>
+          ) : null}
+        </div>
       </section>
     );
   }
@@ -233,4 +377,131 @@ export default function App() {
       </main>
     </div>
   );
+}
+
+async function playSoundCheckTone() {
+  const AudioContextCtor = window.AudioContext;
+  if (!AudioContextCtor) {
+    throw new Error("This browser does not support the Web Audio API.");
+  }
+
+  const audioContext = new AudioContextCtor();
+
+  try {
+    await audioContext.resume();
+    const oscillator = audioContext.createOscillator();
+    const gain = audioContext.createGain();
+    const now = audioContext.currentTime;
+
+    oscillator.type = "sine";
+    oscillator.frequency.setValueAtTime(880, now);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.2, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.28);
+
+    oscillator.connect(gain);
+    gain.connect(audioContext.destination);
+    oscillator.start(now);
+    oscillator.stop(now + 0.3);
+
+    await new Promise<void>((resolve) => {
+      const timeoutId = window.setTimeout(resolve, 600);
+      oscillator.onended = () => resolve();
+      oscillator.addEventListener(
+        "ended",
+        () => window.clearTimeout(timeoutId),
+        { once: true },
+      );
+    });
+  } finally {
+    await audioContext.close().catch(() => undefined);
+  }
+}
+
+function isPlayableRound(round: unknown): round is RoundResponse {
+  if (typeof round !== "object" || round === null) {
+    return false;
+  }
+
+  const candidate = round as Partial<RoundResponse>;
+  if (!candidate.roundId) {
+    return false;
+  }
+
+  const targetTranslation =
+    candidate.targetTranslation ??
+    candidate.prompt ??
+    candidate.translations?.target ??
+    "";
+  if (!targetTranslation.trim()) {
+    return false;
+  }
+
+  if (!candidate.left?.ideophoneId || !candidate.right?.ideophoneId) {
+    return false;
+  }
+
+  const hasPlayableStimulus = (option: RoundResponse["left"]) =>
+    Boolean(option?.stimulusUrl || option?.stimulusFile);
+
+  return hasPlayableStimulus(candidate.left) && hasPlayableStimulus(candidate.right);
+}
+
+function isCompletionPayload(payload: unknown) {
+  if (payload === null || payload === undefined) {
+    return true;
+  }
+
+  if (typeof payload !== "object") {
+    return false;
+  }
+
+  const completion = payload as {
+    complete?: unknown;
+    completed?: unknown;
+    sessionComplete?: unknown;
+    message?: unknown;
+    status?: unknown;
+  };
+
+  if (
+    completion.complete === true ||
+    completion.completed === true ||
+    completion.sessionComplete === true
+  ) {
+    return true;
+  }
+
+  const message = [completion.message, completion.status]
+    .filter((value): value is string => typeof value === "string")
+    .join(" ");
+
+  return /complete|completed|finished|no\s+more|no\s+next|no\s+unanswered/i.test(
+    message,
+  );
+}
+
+function isCompletionError(caught: unknown) {
+  if (!(caught instanceof ApiError) || caught.status !== 404) {
+    return false;
+  }
+
+  const body = caught.body;
+  const bodyMessage =
+    typeof body === "string"
+      ? body
+      : isErrorMessageBody(body)
+        ? [body.message, body.error].filter(Boolean).join(" ")
+        : "";
+  const message = `${caught.message} ${bodyMessage}`;
+
+  return /complete|completed|finished|no\s+more|no\s+next|no\s+unanswered/i.test(
+    message,
+  );
+}
+
+function isErrorMessageBody(
+  body: unknown,
+): body is { message?: string; error?: string } {
+  return typeof body === "object" && body !== null;
 }

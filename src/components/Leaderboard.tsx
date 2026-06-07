@@ -15,27 +15,19 @@ export default function Leaderboard({
 }: LeaderboardProps) {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [attempts, setAttempts] = useState<AttemptResponse[]>([]);
-  const [error, setError] = useState("");
+  const [leaderboardError, setLeaderboardError] = useState("");
+  const [attemptsError, setAttemptsError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadScores() {
-      setError("");
+    async function loadLeaderboard() {
+      setLeaderboardError("");
 
       try {
         const entries = await getLeaderboard();
         if (isMounted) {
           setLeaderboard(entries);
-        }
-
-        if (isAuthenticated) {
-          const recentAttempts = await getMyAttempts();
-          if (isMounted) {
-            setAttempts(recentAttempts);
-          }
-        } else if (isMounted) {
-          setAttempts([]);
         }
       } catch (caught) {
         if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
@@ -44,12 +36,45 @@ export default function Leaderboard({
         }
 
         if (isMounted) {
-          setError(caught instanceof Error ? caught.message : "Scores failed");
+          setLeaderboardError(
+            caught instanceof Error ? caught.message : "Leaderboard failed",
+          );
         }
       }
     }
 
-    void loadScores();
+    async function loadAttempts() {
+      if (!isAuthenticated) {
+        if (isMounted) {
+          setAttempts([]);
+          setAttemptsError("");
+        }
+        return;
+      }
+
+      setAttemptsError("");
+
+      try {
+        const recentAttempts = await getMyAttempts();
+        if (isMounted) {
+          setAttempts(recentAttempts);
+        }
+      } catch (caught) {
+        if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
+          onAuthExpired(caught.message);
+          return;
+        }
+
+        if (isMounted) {
+          setAttemptsError(
+            caught instanceof Error ? caught.message : "Attempts failed",
+          );
+        }
+      }
+    }
+
+    void loadLeaderboard();
+    void loadAttempts();
 
     return () => {
       isMounted = false;
@@ -84,17 +109,21 @@ export default function Leaderboard({
         ) : (
           <p className="muted">No scores yet.</p>
         )}
+
+        {leaderboardError ? <p className="error-text">{leaderboardError}</p> : null}
       </div>
 
       {isAuthenticated ? (
         <div className="score-column">
-          <h2>Recent Attempts</h2>
+          <h2 id="attempts-title">Recent Attempts</h2>
           {attempts.length > 0 ? (
             <ul className="attempt-list">
               {attempts.slice(0, 5).map((attempt, index) => (
                 <li key={`${attempt.answeredAt ?? "attempt"}-${index}`}>
                   <span>{attempt.correct ? "Correct" : "Incorrect"}</span>
-                  <strong>{attempt.prompt}</strong>
+                  <strong>
+                    {attempt.targetTranslation ?? attempt.prompt ?? "Round"}
+                  </strong>
                   <span>
                     {attempt.selectedKana}
                     {attempt.correctKana ? ` / ${attempt.correctKana}` : ""}
@@ -105,10 +134,10 @@ export default function Leaderboard({
           ) : (
             <p className="muted">No attempts yet.</p>
           )}
+
+          {attemptsError ? <p className="error-text">{attemptsError}</p> : null}
         </div>
       ) : null}
-
-      {error ? <p className="error-text centered">{error}</p> : null}
     </section>
   );
 }

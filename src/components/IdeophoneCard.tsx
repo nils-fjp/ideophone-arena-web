@@ -1,3 +1,4 @@
+import { backendUrl } from "../api/client";
 import type { IdeophoneOption } from "../api/types";
 import StimulusPlayer from "./StimulusPlayer";
 
@@ -6,6 +7,7 @@ type IdeophoneCardProps = {
   mode?: "display" | "button";
   visible?: boolean;
   mediaVisible?: boolean;
+  mediaPlaying?: boolean;
   autoplayToken?: number;
   disabled?: boolean;
   onEnded?: () => void;
@@ -18,12 +20,15 @@ export default function IdeophoneCard({
   mode = "display",
   visible = true,
   mediaVisible = false,
+  mediaPlaying = false,
   autoplayToken,
   disabled = false,
   onEnded,
   onError,
   onSelect,
 }: IdeophoneCardProps) {
+  const optionLabel =
+    option.romaji ?? option.kana ?? option.stimulusFile ?? `option ${option.ideophoneId}`;
   const className = [
     "ideophone-card",
     mode === "button" ? "choice-button" : "",
@@ -38,17 +43,17 @@ export default function IdeophoneCard({
         <StimulusPlayer
           autoplayToken={autoplayToken}
           src={resolveStimulusSrc(option)}
-          visible={mediaVisible}
+          playing={mediaPlaying}
           onEnded={onEnded}
           onError={onError}
         />
       ) : null}
 
-      <span className="kana-text">{option.kana}</span>
-
       {mode === "button" ? (
         <span className="card-meta">
-          {[option.romaji, option.gloss].filter(Boolean).join(" - ")}
+          {[option.romaji, option.canonicalScript ?? option.modality]
+            .filter(Boolean)
+            .join(" - ")}
         </span>
       ) : null}
     </>
@@ -57,6 +62,7 @@ export default function IdeophoneCard({
   if (mode === "button") {
     return (
       <button
+        aria-label={`Select ${optionLabel}`}
         className={className}
         disabled={disabled || !visible}
         type="button"
@@ -72,8 +78,16 @@ export default function IdeophoneCard({
 
 function resolveStimulusSrc(option: IdeophoneOption) {
   if (option.stimulusUrl) {
-    return option.stimulusUrl;
+    return backendUrl(option.stimulusUrl);
   }
 
-  return option.stimulusFile ? `/stimuli/${option.stimulusFile}` : undefined;
+  if (!option.stimulusFile) {
+    return undefined;
+  }
+
+  const stimulusPath = option.stimulusFile.startsWith("/stimuli/")
+    ? option.stimulusFile
+    : `/stimuli/${option.stimulusFile.replace(/^\/+/, "")}`;
+
+  return backendUrl(stimulusPath);
 }

@@ -27,16 +27,50 @@ http://localhost:5174
 The frontend expects the Spring Boot API at:
 
 ```text
-http://localhost:8080
+http://localhost:8081
 ```
 
-Local Vite development uses the `/api` proxy in `vite.config.ts`. Keep `VITE_API_BASE_URL` empty for that path:
+Set the API base URL when running directly against the backend:
 
 ```text
-VITE_API_BASE_URL=
+VITE_API_BASE_URL=http://localhost:8081
 ```
 
-Set `VITE_API_BASE_URL=http://localhost:8080` only if you bypass the Vite proxy. `.env.local` should stay untracked.
+If you intentionally use the local Vite proxy for `/api` and `/stimuli`, leave
+`VITE_API_BASE_URL` empty in `.env.local`. `.env.local` should stay untracked.
+
+## Demo Path
+
+Backend: `http://localhost:8081`
+
+Frontend: `http://localhost:5174`
+
+Default API base URL: `VITE_API_BASE_URL=http://localhost:8081`
+
+Manual browser proof from the task context: Vite was served at
+`http://127.0.0.1:5174/` with `VITE_API_BASE_URL=` so the dev-server `/api`
+and `/stimuli` proxies forwarded requests to `http://localhost:8081`. The flow
+registered a new user, passed the sound check, started a game session with the
+demo setup, completed a session, showed a final summary, and loaded leaderboard
+plus recent attempts without leaving the app in a stuck loading state. The same
+proof observed successful backend-served `/stimuli/` media requests and no muted
+stimulus media elements.
+
+Remaining blocker: none for the frontend demo path while the backend is running
+on port `8081`.
+
+Browser path:
+
+1. Open `http://localhost:5174`.
+2. Register or log in.
+3. Run the sound check.
+4. Start New Game.
+5. Watch the fixation, left stimulus, right stimulus, and choice phase.
+6. Choose one ideophone.
+7. Confirm backend feedback appears.
+8. Finish the session and see the completion summary.
+9. Scroll to the leaderboard or recent attempts section.
+10. Start a new game and confirm the demo setup resets cleanly.
 
 ## Scripts
 

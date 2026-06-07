@@ -16,15 +16,14 @@ export type AuthResponse = {
 };
 
 export type StartSessionRequest = {
-  difficultyLevel?: number;
-  conditionName?: ConditionName;
+  difficultyLevel: number;
+  conditionName: ConditionName;
 };
 
 export type ConditionName =
   | "CONDITION_1_SOKUON"
   | "CONDITION_2_SOKUON"
-  | "CONDITION_3_SOKUON"
-  | string;
+  | "CONDITION_3_SOKUON";
 
 export type Modality = "AUDITORY" | "VISUAL" | "INTEROCEPTIVE" | "PRACTICE" | string;
 
@@ -37,9 +36,8 @@ export type GameSessionResponse = {
 
 export type IdeophoneOption = {
   ideophoneId: number;
-  kana: string;
+  kana?: string;
   romaji?: string;
-  gloss?: string;
   canonicalScript?: string;
   modality?: Modality;
   stimulusFile?: string;
@@ -49,10 +47,11 @@ export type IdeophoneOption = {
 export type RoundResponse = {
   sessionUuid: string;
   roundId: number;
-  prompt: string;
+  targetTranslation: string;
+  prompt?: string;
   conditionName: ConditionName;
   difficultyLevel: number;
-  translations: {
+  translations?: {
     target?: string;
     other?: string;
   };
@@ -63,6 +62,16 @@ export type RoundResponse = {
     preChoiceDelayMs?: number;
   };
 };
+
+export type CompletionResponse = {
+  complete?: boolean;
+  completed?: boolean;
+  sessionComplete?: boolean;
+  message?: string;
+  status?: string;
+};
+
+export type NextRoundResponse = RoundResponse | CompletionResponse | null | undefined;
 
 export type SubmitAnswerRequest = {
   roundId: number;
@@ -75,6 +84,7 @@ export type AnswerResultResponse = {
   selectedIdeophoneId: number;
   correctIdeophoneId?: number;
   correct: boolean;
+  targetTranslation?: string;
   prompt?: string;
   correctKana?: string;
   selectedKana?: string;
@@ -91,6 +101,7 @@ export type LeaderboardEntry = {
 
 export type AttemptResponse = {
   answeredAt?: string;
+  targetTranslation?: string;
   prompt?: string;
   selectedKana?: string;
   correctKana?: string;

@@ -6,21 +6,28 @@ import type {
   RoundResponse,
   TrialPhase,
 } from "../api/types";
+import type { SessionStats } from "../App";
 import FeedbackPanel from "./FeedbackPanel";
 import IdeophoneCard from "./IdeophoneCard";
+
+const FEEDBACK_AUTO_ADVANCE_MS = 900;
 
 type TrialPlayerProps = {
   sessionUuid: string;
   round: RoundResponse;
+  sessionStats: SessionStats;
   onNeedNextRound: () => void;
-  onAnswered: () => void;
+  onBackToStart: () => void;
+  onAnswered: (result: AnswerResultResponse) => void;
   onAuthExpired: (message: string) => void;
 };
 
 export default function TrialPlayer({
   sessionUuid,
   round,
+  sessionStats,
   onNeedNextRound,
+  onBackToStart,
   onAnswered,
   onAuthExpired,
 }: TrialPlayerProps) {
@@ -31,8 +38,17 @@ export default function TrialPlayer({
   const [submitError, setSubmitError] = useState("");
   const choiceStartedAtRef = useRef<number | null>(null);
   const roundTokenRef = useRef(0);
+  const rightDelayTimeoutRef = useRef<number | null>(null);
+  const feedbackTimeoutRef = useRef<number | null>(null);
+  const targetTranslation = getTargetTranslation(round);
+  const otherTranslation = round.translations?.other?.trim();
+  const roundProblem = getRoundProblem(round, targetTranslation);
 
   useEffect(() => {
+    if (roundProblem) {
+      return undefined;
+    }
+
     const token = roundTokenRef.current + 1;
     roundTokenRef.current = token;
 
@@ -44,7 +60,7 @@ export default function TrialPlayer({
     }, delay);
 
     return () => window.clearTimeout(timerId);
-  }, [round.roundId, round.timing?.fixationMs]);
+  }, [round.roundId, round.timing?.fixationMs, roundProblem]);
 
   function handleLeftEnded() {
     setPhase((current) =>
@@ -55,7 +71,11 @@ export default function TrialPlayer({
   function handleRightEnded() {
     const preChoiceDelayMs = round.timing?.preChoiceDelayMs ?? 0;
 
-    window.setTimeout(() => {
+    if (rightDelayTimeoutRef.current !== null) {
+      window.clearTimeout(rightDelayTimeoutRef.current);
+    }
+
+    rightDelayTimeoutRef.current = window.setTimeout(() => {
       choiceStartedAtRef.current = performance.now();
       setPhase((current) => (current === "right-playing" ? "choice" : current));
     }, preChoiceDelayMs);
@@ -79,7 +99,7 @@ export default function TrialPlayer({
       });
       setAnswerResult(result);
       setPhase("feedback");
-      onAnswered();
+      onAnswered(result);
     } catch (caught) {
       if (caught instanceof ApiError && [401, 403].includes(caught.status)) {
         onAuthExpired(caught.message);
@@ -97,59 +117,117 @@ export default function TrialPlayer({
     setPlaybackMessage(message);
   }
 
-  if (phase === "fixation") {
+  useEffect(
+    () => () => {
+      if (rightDelayTimeoutRef.current !== null) {
+        window.clearTimeout(rightDelayTimeoutRef.current);
+      }
+      if (feedbackTimeoutRef.current !== null) {
+        window.clearTimeout(feedbackTimeoutRef.current);
+      }
+    },
+    [],
+  );
+
+  useEffect(() => {
+    if (phase !== "feedback" || !answerResult) {
+      return undefined;
+    }
+
+    feedbackTimeoutRef.current = window.setTimeout(() => {
+      onNeedNextRound();
+    }, FEEDBACK_AUTO_ADVANCE_MS);
+
+    return () => {
+      if (feedbackTimeoutRef.current !== null) {
+        window.clearTimeout(feedbackTimeoutRef.current);
+        feedbackTimeoutRef.current = null;
+      }
+    };
+  }, [answerResult, onNeedNextRound, phase]);
+
+  if (roundProblem) {
     return (
-      <section className="trial-stage fixation-stage" aria-live="polite">
-        <span className="fixation-cross">+</span>
+      <section className="trial-stage error-panel" aria-live="polite">
+        <h2>Round unavailable</h2>
+        <p>{roundProblem}</p>
+        <div className="completion-actions">
+          <button className="primary-button" type="button" onClick={onNeedNextRound}>
+            Try Next Round
+          </button>
+          <button className="secondary-button" type="button" onClick={onBackToStart}>
+            Back to start
+          </button>
+        </div>
       </section>
     );
   }
 
-  if (phase === "feedback" && answerResult) {
-    return <FeedbackPanel result={answerResult} onNext={onNeedNextRound} />;
-  }
-
+  const isFixation = phase === "fixation";
   const isLeftPlaying = phase === "left-playing";
   const isRightPlaying = phase === "right-playing";
   const isChoice = phase === "choice" || phase === "submitting";
+  const hasFeedback = phase === "feedback" && answerResult !== null;
+  const cardsAreChoices = isChoice;
 
   return (
     <section className="trial-stage" aria-live="polite">
       <div className="trial-copy">
         <p>Listen to these two Japanese words.</p>
-        <p className="small-copy">Click to choose after both have played.</p>
-      </div>
-
-      <div className="stimulus-row" aria-label="Ideophone stimuli">
-        <IdeophoneCard
-          autoplayToken={round.roundId * 10 + 1}
-          mediaVisible={isLeftPlaying}
-          option={round.left}
-          visible={isLeftPlaying || isChoice}
-          onEnded={handleLeftEnded}
-          onError={handlePlaybackError}
-        />
-
-        <IdeophoneCard
-          autoplayToken={round.roundId * 10 + 2}
-          mediaVisible={isRightPlaying}
-          option={round.right}
-          visible={isRightPlaying || isChoice}
-          onEnded={handleRightEnded}
-          onError={handlePlaybackError}
-        />
-      </div>
-
-      <div className="translation-lines">
-        <p>
-          One of them means{" "}
-          <strong>{round.translations?.target ?? round.prompt}</strong>
+        <p className="small-copy">
+          {isChoice
+            ? "Click a stimulus to select it."
+            : hasFeedback
+              ? "Feedback recorded. Continuing..."
+              : "Watch or listen to both before choosing."}
         </p>
-        {round.translations?.other ? (
-          <p>
-            The other means <strong>{round.translations.other}</strong>
-          </p>
-        ) : null}
+      </div>
+
+      <div
+        className={isFixation ? "stimulus-row fixation-row" : "stimulus-row"}
+        aria-label="Ideophone stimuli"
+      >
+        {isFixation ? (
+          <span className="fixation-cross">+</span>
+        ) : (
+          <>
+            <IdeophoneCard
+              autoplayToken={round.roundId * 10 + 1}
+              disabled={!isChoice || phase === "submitting"}
+              mediaPlaying={isLeftPlaying}
+              mediaVisible={isLeftPlaying || isChoice || hasFeedback}
+              mode={cardsAreChoices ? "button" : "display"}
+              option={round.left}
+              visible={isLeftPlaying || isChoice || hasFeedback}
+              onEnded={handleLeftEnded}
+              onError={handlePlaybackError}
+              onSelect={handleSelect}
+            />
+
+            <IdeophoneCard
+              autoplayToken={round.roundId * 10 + 2}
+              disabled={!isChoice || phase === "submitting"}
+              mediaPlaying={isRightPlaying}
+              mediaVisible={isRightPlaying || isChoice || hasFeedback}
+              mode={cardsAreChoices ? "button" : "display"}
+              option={round.right}
+              visible={isRightPlaying || isChoice || hasFeedback}
+              onEnded={handleRightEnded}
+              onError={handlePlaybackError}
+              onSelect={handleSelect}
+            />
+          </>
+        )}
+      </div>
+
+      <div className="translation-lines" aria-label="Translations">
+        <p className="translation-option">
+          One of them means <strong>{targetTranslation}</strong>
+        </p>
+        <p className="translation-option">
+          The other means{" "}
+          <strong>{otherTranslation || "an unavailable translation"}</strong>
+        </p>
       </div>
 
       {playbackMessage ? (
@@ -159,33 +237,41 @@ export default function TrialPlayer({
       ) : null}
 
       {isChoice ? (
-        <div className="choice-area">
-          <p className="question-text">
-            Which one do you think means
-            <br />
-            <strong>{round.translations?.target ?? round.prompt}?</strong>
-          </p>
-          <p className="small-copy">Click one to select:</p>
-
-          <div className="choice-grid">
-            <IdeophoneCard
-              disabled={phase === "submitting"}
-              mode="button"
-              option={round.left}
-              onSelect={handleSelect}
-            />
-            <IdeophoneCard
-              disabled={phase === "submitting"}
-              mode="button"
-              option={round.right}
-              onSelect={handleSelect}
-            />
-          </div>
-        </div>
+        <p className="question-text">
+          Which stimulus means <strong>{targetTranslation}?</strong>
+        </p>
       ) : null}
 
       {phase === "submitting" ? <p className="notice-text">Submitting...</p> : null}
       {submitError ? <p className="error-text centered">{submitError}</p> : null}
+      {hasFeedback ? (
+        <FeedbackPanel result={answerResult} sessionStats={sessionStats} />
+      ) : null}
     </section>
   );
+}
+
+function getTargetTranslation(round: RoundResponse) {
+  return (
+    round.targetTranslation ??
+    round.prompt ??
+    round.translations?.target ??
+    ""
+  ).trim();
+}
+
+function getRoundProblem(round: RoundResponse, targetTranslation: string) {
+  if (!round.roundId) {
+    return "The backend returned a round without a valid roundId.";
+  }
+
+  if (!targetTranslation) {
+    return "The backend returned a round without targetTranslation.";
+  }
+
+  if (!round.left?.ideophoneId || !round.right?.ideophoneId) {
+    return "The backend returned a round without two valid ideophone choices.";
+  }
+
+  return "";
 }
