@@ -1,27 +1,18 @@
-import type { AnswerResultResponse, RoundResponse } from "../api/types";
-import type { SessionStats } from "../App";
-import { getResearchFlavorNote } from "../researchFlavor";
+import type { AnswerResultResponse, IdeophoneOption, RoundResponse } from "../api/types";
+import { getCanonicalDisplayForm } from "../conditionPresentation";
 
 type FeedbackPanelProps = {
   result: AnswerResultResponse;
   round: RoundResponse;
-  sessionStats: SessionStats;
 };
 
 export default function FeedbackPanel({
   result,
   round,
-  sessionStats,
 }: FeedbackPanelProps) {
-  const sessionAccuracy =
-    sessionStats.answered > 0
-      ? Math.round((sessionStats.correct / sessionStats.answered) * 100)
-      : 0;
-  const accountAccuracy =
-    result.totalAnswered > 0
-      ? Math.round((result.totalCorrect / result.totalAnswered) * 100)
-      : 0;
-  const researchNote = getResearchFlavorNote(round, result);
+  const selectedSummary = getChoiceSummary(round, result, "selected");
+  const correctSummary = getChoiceSummary(round, result, "correct");
+  const selectedIsCorrect = selectedSummary.side === correctSummary.side;
 
   return (
     <section
@@ -30,38 +21,138 @@ export default function FeedbackPanel({
     >
       <h2>{result.correct ? "Correct" : "Incorrect"}</h2>
 
-      <dl className="feedback-grid">
-        {result.selectedKana ? (
+      <div className="feedback-choice-grid">
+        {selectedIsCorrect ? (
+          <ChoiceSummaryCard summary={correctSummary} />
+        ) : (
           <>
-            <dt>Selected</dt>
-            <dd>{result.selectedKana}</dd>
+            <ChoiceSummaryCard title="You chose" summary={selectedSummary} />
+            <ChoiceSummaryCard title="Correct word" summary={correctSummary} />
           </>
-        ) : null}
-
-        {result.correctKana ? (
-          <>
-            <dt>Correct</dt>
-            <dd>{result.correctKana}</dd>
-          </>
-        ) : null}
-
-        <dt>Session score</dt>
-        <dd>
-          {sessionStats.correct} / {sessionStats.answered} ({sessionAccuracy}%)
-        </dd>
-
-        <dt>Account total</dt>
-        <dd>
-          {result.totalCorrect} / {result.totalAnswered} ({accountAccuracy}%)
-        </dd>
-      </dl>
-
-      <aside className="research-note" aria-label={researchNote.label}>
-        <strong>{researchNote.label}</strong>
-        <span>{researchNote.text}</span>
-      </aside>
-
-      <p className="notice-text">Use Next trial when you are ready to continue.</p>
+        )}
+      </div>
     </section>
   );
+}
+
+type ChoiceSummaryKind = "selected" | "correct";
+
+type ChoiceSummary = {
+  displayForm: string;
+  meaning: string;
+  romaji: string;
+  side: string;
+};
+
+function ChoiceSummaryCard({
+  summary,
+  title,
+}: {
+  summary: ChoiceSummary;
+  title?: string;
+}) {
+  return (
+    <article className="feedback-choice-card">
+      {title ? <h3>{title}</h3> : null}
+      <p className="feedback-side">Card {summary.side}</p>
+      <p className="feedback-display-form">{summary.displayForm}</p>
+      <dl>
+        <dt>Romaji</dt>
+        <dd>{summary.romaji}</dd>
+        <dt>Meaning</dt>
+        <dd>{summary.meaning}</dd>
+      </dl>
+    </article>
+  );
+}
+
+function getChoiceSummary(
+  round: RoundResponse,
+  result: AnswerResultResponse,
+  kind: ChoiceSummaryKind,
+): ChoiceSummary {
+  const option =
+    kind === "selected"
+      ? findOption(round, result.selectedIdeophoneId) ??
+        findOptionByKana(round, result.selectedKana)
+      : findOption(round, result.correctIdeophoneId) ??
+        findOptionByKana(round, result.correctKana) ??
+        (result.correct
+          ? findOption(round, result.selectedIdeophoneId)
+          : undefined);
+  const side = getSide(round, option);
+
+  return {
+    displayForm: option ? getCanonicalDisplayForm(option) : fallbackKana(kind, result),
+    meaning: getMeaning(round, result, option, kind),
+    romaji: option?.romaji ?? "Unavailable",
+    side,
+  };
+}
+
+function findOption(round: RoundResponse, ideophoneId?: number) {
+  if (!ideophoneId) {
+    return undefined;
+  }
+
+  return getOptions(round).find((option) => option.ideophoneId === ideophoneId);
+}
+
+function findOptionByKana(round: RoundResponse, kana?: string) {
+  const normalizedKana = kana?.trim();
+  if (!normalizedKana) {
+    return undefined;
+  }
+
+  return getOptions(round).find((option) => option.kana?.trim() === normalizedKana);
+}
+
+function getOptions(round: RoundResponse): IdeophoneOption[] {
+  return [round.left, round.right];
+}
+
+function getSide(round: RoundResponse, option?: IdeophoneOption) {
+  if (!option) {
+    return "unknown";
+  }
+
+  if (option.ideophoneId === round.left.ideophoneId) {
+    return "A";
+  }
+  if (option.ideophoneId === round.right.ideophoneId) {
+    return "B";
+  }
+
+  return "unknown";
+}
+
+function getMeaning(
+  round: RoundResponse,
+  result: AnswerResultResponse,
+  option: IdeophoneOption | undefined,
+  kind: ChoiceSummaryKind,
+) {
+  const targetMeaning =
+    result.targetTranslation ?? result.prompt ?? round.targetTranslation ?? round.prompt;
+  if (kind === "correct") {
+    return targetMeaning ?? "Unavailable";
+  }
+
+  if (result.correct) {
+    return targetMeaning ?? "Unavailable";
+  }
+
+  if (option?.ideophoneId === result.correctIdeophoneId) {
+    return targetMeaning ?? "Unavailable";
+  }
+
+  return round.translations?.other ?? "Not provided by this round";
+}
+
+function fallbackKana(kind: ChoiceSummaryKind, result: AnswerResultResponse) {
+  if (kind === "selected") {
+    return result.selectedKana ?? "Unavailable";
+  }
+
+  return result.correctKana ?? "Unavailable";
 }

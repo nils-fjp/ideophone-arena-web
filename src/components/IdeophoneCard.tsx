@@ -5,9 +5,11 @@ import StimulusDisplay from "./StimulusDisplay";
 import StimulusPlayback from "./StimulusPlayback";
 
 type IdeophoneCardProps = {
+  meaning?: string;
   option: IdeophoneOption;
   presentation: ConditionPresentation;
   positionLabel: string;
+  revealDetails?: boolean;
   mode?: "display" | "button";
   visible?: boolean;
   mediaVisible?: boolean;
@@ -20,9 +22,11 @@ type IdeophoneCardProps = {
 };
 
 export default function IdeophoneCard({
+  meaning,
   option,
   presentation,
   positionLabel,
+  revealDetails = false,
   mode = "display",
   visible = true,
   mediaVisible = false,
@@ -46,9 +50,11 @@ export default function IdeophoneCard({
   const content = (
     <>
       <StimulusDisplay
+        meaning={meaning}
         option={option}
         positionLabel={positionLabel}
         presentation={presentation}
+        revealDetails={revealDetails}
       />
 
       {mediaVisible ? (
@@ -70,7 +76,7 @@ export default function IdeophoneCard({
   if (mode === "button") {
     return (
       <button
-        aria-label={`Select ${optionLabel}`}
+        aria-label={`Choose card ${positionLabel}: ${optionLabel}`}
         className={className}
         disabled={disabled || !visible}
         type="button"

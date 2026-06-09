@@ -37,7 +37,7 @@ export default function Instructions({
       </p>
 
       <p>
-        First, two stimuli will play automatically in sequence while both
+        First, two words will play automatically in sequence while both
         translation options stay visible. Watch or listen to both before making
         your choice.
       </p>
@@ -48,16 +48,16 @@ export default function Instructions({
       </p>
 
       <p>
-        Click one stimulus to submit your answer. Feedback appears immediately
+        Choose one card to submit your answer. Feedback appears immediately
         after the backend records the response. Review the note, then click Next
-        trial when you are ready to continue.
+        round when you are ready to continue.
       </p>
 
       <section className="script-lab-selector" aria-labelledby="script-lab-title">
         <div>
           <h2 id="script-lab-title">Script Lab</h2>
           <p>
-            Compare presentation conditions for the same backend-driven task.
+            Compare three presentation setups for the same backend-driven task.
             Difficulty stays fixed at {difficultyLevel}.
           </p>
         </div>

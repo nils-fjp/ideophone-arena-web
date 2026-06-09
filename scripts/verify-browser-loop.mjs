@@ -335,7 +335,7 @@ async function run() {
         if (
           nextText.includes("+") ||
           nextText.includes("Listen to these two Japanese words.") ||
-          nextText.includes("Click a stimulus to select it.")
+          nextText.includes("Choose a card.")
         ) {
           return "next-round";
         }
@@ -570,7 +570,7 @@ async function answerCurrentRound(ws, expectFixation) {
       if (text.includes("Session complete")) {
         return "complete";
       }
-      return text.includes("Click a stimulus to select it.") ? "choice" : "";
+      return text.includes("Choose a card.") ? "choice" : "";
     },
     "choice phase",
     45000,
@@ -655,6 +655,18 @@ async function answerCurrentRound(ws, expectFixation) {
     ws,
     "document.querySelector('.feedback')?.innerText ?? ''",
   );
+  if (!feedbackText.includes("You chose")) {
+    throw new Error("Feedback did not identify the selected card");
+  }
+  if (!feedbackText.includes("Correct word")) {
+    throw new Error("Feedback did not identify the correct card");
+  }
+  if (!feedbackText.includes("Romaji")) {
+    throw new Error("Feedback did not include romaji");
+  }
+  if (!feedbackText.includes("Meaning")) {
+    throw new Error("Feedback did not include meanings");
+  }
   if (!feedbackText.includes("Session score")) {
     throw new Error("Feedback did not include session score");
   }
@@ -671,10 +683,10 @@ async function answerCurrentRound(ws, expectFixation) {
     "Boolean(document.querySelector('.feedback') && document.querySelector('.feedback-next-button'))",
   );
   if (!feedbackStillVisible) {
-    throw new Error("Feedback did not stay visible until Next trial");
+    throw new Error("Feedback did not stay visible until Next round");
   }
-  if (!(await clickText(ws, "Next trial"))) {
-    throw new Error("Next trial button not found");
+  if (!(await clickText(ws, "Next round"))) {
+    throw new Error("Next round button not found");
   }
 
   return {

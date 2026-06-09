@@ -265,7 +265,6 @@ button {
   gap: 0.7rem;
   margin: 0 0 2rem;
   padding: 0.8rem 0;
-  border-block: 1px solid #b9b7b2;
   text-align: left;
 }
 
@@ -392,10 +391,51 @@ button {
 }
 
 .script-display {
+  gap: 0.55rem;
   padding: 0.5rem;
-  font-size: 2.6rem;
   font-weight: 700;
   line-height: 1.1;
+  overflow-wrap: anywhere;
+}
+
+.revealed-display {
+  gap: 0.25rem;
+  padding: 0.4rem;
+  text-align: center;
+}
+
+.card-side-label {
+  display: inline-grid;
+  place-items: center;
+  min-width: 2rem;
+  min-height: 2rem;
+  border: 1px solid #202124;
+  border-radius: 999px;
+  color: #202124;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.script-display-text {
+  font-size: 2.65rem;
+  font-weight: 800;
+  line-height: 1.08;
+  overflow-wrap: anywhere;
+}
+
+.romaji-display-text {
+  color: #444444;
+  font-size: 1.05rem;
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+.meaning-display-text {
+  color: #565656;
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.25;
   overflow-wrap: anywhere;
 }
 
@@ -488,46 +528,65 @@ button {
 }
 
 .feedback-next-button {
-  margin-top: 1rem;
+  display: block;
+  min-width: 160px;
+  margin: 0 auto 0.5rem;
 }
 
-.feedback-grid {
+.feedback-choice-grid {
   display: grid;
-  grid-template-columns: max-content 1fr;
-  gap: 0.45rem 1.25rem;
-  width: min(100%, 420px);
-  margin: 0 auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin: 0.75rem auto 1rem;
+}
+
+.feedback-choice-card {
+  display: grid;
+  gap: 0.45rem;
+  padding: 0.85rem;
+  border: 1px solid #d4d1cb;
+  background: #fafafa;
   text-align: left;
 }
 
-.feedback-grid dt {
-  color: #5d5d5d;
-}
-
-.feedback-grid dd {
+.feedback-choice-card h3,
+.feedback-choice-card p {
   margin: 0;
-  font-weight: 700;
 }
 
-.research-note {
-  display: grid;
-  gap: 0.35rem;
-  width: min(100%, 560px);
-  margin: 1rem auto 0;
-  padding-top: 1rem;
-  border-top: 1px solid #d4d1cb;
-  color: #343434;
-  line-height: 1.45;
-  text-align: left;
-}
-
-.research-note strong {
-  color: #202124;
+.feedback-choice-card h3 {
   font-size: 0.95rem;
 }
 
-.research-note span {
-  font-size: 1rem;
+.feedback-side {
+  color: #565656;
+  font-size: 0.85rem;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.feedback-display-form {
+  font-size: 1.8rem;
+  font-weight: 800;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.feedback-choice-card dl {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.6rem;
+  margin: 0;
+}
+
+.feedback-choice-card dt {
+  color: #5d5d5d;
+}
+
+.feedback-choice-card dd {
+  margin: 0;
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .score-section {
@@ -702,6 +761,10 @@ td {
     font-size: 1.45rem;
   }
 
+  .feedback-choice-grid {
+    grid-template-columns: 1fr;
+  }
+
   .attempt-list li {
     grid-template-columns: 1fr;
     gap: 0.2rem;
@@ -709,5 +772,139 @@ td {
 
   .condition-option-list {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-main {
+    padding-top: 0.75rem;
+  }
+
+  .site-header {
+    align-items: flex-start;
+    padding: 0.75rem 1rem;
+  }
+
+  .user-controls {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.5rem;
+  }
+
+  .trial-stage {
+    min-height: 0;
+    padding-top: 0;
+  }
+
+  .trial-progress {
+    gap: 0.45rem;
+    margin-bottom: 0.75rem;
+    padding: 0 0 0.5rem;
+  }
+
+  .progress-summary {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.2rem 0.55rem;
+    font-size: 0.85rem;
+    line-height: 1.15;
+  }
+
+  .trial-copy {
+    margin-bottom: 0.65rem;
+    font-size: 1.25rem;
+  }
+
+  .stimulus-row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.65rem;
+    min-height: 0;
+  }
+
+  .fixation-row {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 150px;
+  }
+
+  .choice-button,
+  .ideophone-card {
+    min-height: 132px;
+  }
+
+  .fixation-cross {
+    font-size: 3.75rem;
+  }
+
+  .script-display-text {
+    font-size: 2.15rem;
+  }
+
+  .card-side-label {
+    min-width: 1.7rem;
+    min-height: 1.7rem;
+    font-size: 0.78rem;
+  }
+
+  .revealed-display {
+    gap: 0.16rem;
+    padding: 0.25rem;
+  }
+
+  .romaji-display-text {
+    font-size: 0.95rem;
+  }
+
+  .meaning-display-text {
+    font-size: 0.82rem;
+    line-height: 1.18;
+  }
+
+  .translation-lines {
+    min-height: 0;
+    gap: 0.45rem;
+    margin-top: 0.8rem;
+  }
+
+  .question-text {
+    min-height: 0;
+    font-size: 1.25rem;
+    margin-top: 0.8rem;
+  }
+
+  .feedback {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .feedback h2 {
+    margin-bottom: 0.45rem;
+    font-size: 1.35rem;
+  }
+
+  .feedback-choice-grid {
+    gap: 0.55rem;
+    margin: 0.65rem auto 0.75rem;
+  }
+
+  .feedback-choice-card {
+    gap: 0.28rem;
+    padding: 0.62rem;
+  }
+
+  .feedback-display-form {
+    font-size: 1.5rem;
+  }
+
+  .feedback-choice-card dl {
+    grid-template-columns: 1fr;
+    gap: 0.18rem;
+  }
+
+  .feedback-next-button {
+    width: min(100%, 260px);
+    margin-top: 0;
+    margin-bottom: 0.4rem;
   }
 }

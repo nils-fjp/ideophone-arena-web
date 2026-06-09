@@ -89,7 +89,7 @@ function modalityText(modality: ReturnType<typeof normalizeModality>) {
 function conditionText(conditionName: RoundResponse["conditionName"]) {
   switch (conditionName) {
     case "CONDITION_1_SOKUON":
-      return "This demo condition keeps the focus on the sound rather than script effects.";
+      return "Audio-only play keeps the focus on sound rather than script cues.";
     case "CONDITION_2_SOKUON":
       return "Matched script can be explored here, but this app should not imply that it guarantees easier guessing.";
     case "CONDITION_3_SOKUON":

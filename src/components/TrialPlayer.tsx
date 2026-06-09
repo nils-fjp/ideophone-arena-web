@@ -163,6 +163,14 @@ export default function TrialPlayer({
     totalRounds > 0
       ? Math.min(100, Math.round((sessionStats.answered / totalRounds) * 100))
       : 0;
+  const leftMeaning = hasFeedback
+    ? getPostAnswerMeaning(round, answerResult, round.left, targetTranslation)
+    : undefined;
+  const rightMeaning = hasFeedback
+    ? getPostAnswerMeaning(round, answerResult, round.right, targetTranslation)
+    : undefined;
+  const phaseCopy =
+    phase === "loading" ? "Loading the next round." : "";
 
   return (
     <section className="trial-stage" aria-live="polite">
@@ -190,20 +198,12 @@ export default function TrialPlayer({
 
       <div className="trial-copy">
         <p>Listen to these two Japanese words.</p>
-        <p className="small-copy">
-          {isChoice
-            ? "Click a stimulus to select it."
-            : hasFeedback
-              ? "Feedback recorded. Review it before continuing."
-              : phase === "loading"
-                ? "Loading the next backend round."
-                : "Watch or listen to both before choosing."}
-        </p>
+        {phaseCopy ? <p className="small-copy">{phaseCopy}</p> : null}
       </div>
 
       <div
         className={isFixation ? "stimulus-row fixation-row" : "stimulus-row"}
-        aria-label="Ideophone stimuli"
+        aria-label="Ideophone word cards"
       >
         {isFixation ? (
           <span className="fixation-cross">+</span>
@@ -212,12 +212,14 @@ export default function TrialPlayer({
             <IdeophoneCard
               autoplayToken={round.roundId * 10 + 1}
               disabled={!isChoice || phase === "submitting"}
+              meaning={leftMeaning}
               mediaPlaying={isLeftPlaying}
               mediaVisible={isLeftPlaying || isChoice || hasFeedback}
               mode={cardsAreChoices ? "button" : "display"}
               option={round.left}
               positionLabel="A"
               presentation={presentation}
+              revealDetails={hasFeedback}
               visible={isLeftPlaying || isChoice || hasFeedback}
               onEnded={handleLeftEnded}
               onError={handlePlaybackError}
@@ -227,12 +229,14 @@ export default function TrialPlayer({
             <IdeophoneCard
               autoplayToken={round.roundId * 10 + 2}
               disabled={!isChoice || phase === "submitting"}
+              meaning={rightMeaning}
               mediaPlaying={isRightPlaying}
               mediaVisible={isRightPlaying || isChoice || hasFeedback}
               mode={cardsAreChoices ? "button" : "display"}
               option={round.right}
               positionLabel="B"
               presentation={presentation}
+              revealDetails={hasFeedback}
               visible={isRightPlaying || isChoice || hasFeedback}
               onEnded={handleRightEnded}
               onError={handlePlaybackError}
@@ -242,25 +246,27 @@ export default function TrialPlayer({
         )}
       </div>
 
-      <div className="translation-lines" aria-label="Translations">
-        <p className="translation-option">
-          One of them means <strong>{targetTranslation}</strong>
-        </p>
-        <p className="translation-option">
-          The other means{" "}
-          <strong>{otherTranslation || "an unavailable translation"}</strong>
-        </p>
-      </div>
-
-      {playbackMessage ? (
-        <p className="notice-text">
-          Stimulus playback issue: {playbackMessage}
-        </p>
+      {!hasFeedback ? (
+        <div className="translation-lines" aria-label="Translations">
+          <p className="translation-option">
+            One of them means <strong>{targetTranslation}</strong>
+          </p>
+          <p className="translation-option">
+            The other means{" "}
+            <strong>{otherTranslation || "an unavailable translation"}</strong>
+          </p>
+        </div>
       ) : null}
 
       {isChoice ? (
         <p className="question-text">
-          Which stimulus means <strong>{targetTranslation}?</strong>
+          Which one do you think means <strong>{targetTranslation}</strong>
+        </p>
+      ) : null}
+
+      {playbackMessage ? (
+        <p className="notice-text">
+          Sound playback issue: {playbackMessage}
         </p>
       ) : null}
 
@@ -269,19 +275,19 @@ export default function TrialPlayer({
         <p className="notice-text">Loading next round...</p>
       ) : null}
       {submitError ? <p className="error-text centered">{submitError}</p> : null}
+
       {hasFeedback ? (
         <>
           <FeedbackPanel
             result={answerResult}
             round={round}
-            sessionStats={sessionStats}
           />
           <button
             className="primary-button feedback-next-button"
             type="button"
             onClick={handleNextTrial}
           >
-            Next trial
+            Next round
           </button>
         </>
       ) : null}
@@ -312,4 +318,24 @@ function getRoundProblem(round: RoundResponse, targetTranslation: string) {
   }
 
   return "";
+}
+
+function getPostAnswerMeaning(
+  round: RoundResponse,
+  result: AnswerResultResponse,
+  option: IdeophoneOption,
+  targetTranslation: string,
+) {
+  const correctIdeophoneId =
+    result.correctIdeophoneId ??
+    (result.correct ? result.selectedIdeophoneId : undefined);
+  if (correctIdeophoneId && option.ideophoneId === correctIdeophoneId) {
+    return result.targetTranslation ?? result.prompt ?? targetTranslation;
+  }
+
+  if (option.ideophoneId === result.selectedIdeophoneId && result.correct) {
+    return result.targetTranslation ?? result.prompt ?? targetTranslation;
+  }
+
+  return round.translations?.other ?? "Meaning not provided";
 }

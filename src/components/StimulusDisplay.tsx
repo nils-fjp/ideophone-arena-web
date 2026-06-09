@@ -1,22 +1,45 @@
 import type { ConditionPresentation } from "../conditionPresentation";
-import { getVisibleStimulusText } from "../conditionPresentation";
+import {
+  getCanonicalDisplayForm,
+  getPreAnswerDisplayForm,
+} from "../conditionPresentation";
 import type { IdeophoneOption } from "../api/types";
 
 type StimulusDisplayProps = {
+  meaning?: string;
   option: IdeophoneOption;
   presentation: ConditionPresentation;
   positionLabel: string;
+  revealDetails?: boolean;
 };
 
 export default function StimulusDisplay({
+  meaning,
   option,
   presentation,
   positionLabel,
+  revealDetails = false,
 }: StimulusDisplayProps) {
-  if (presentation.kind === "script") {
+  if (revealDetails) {
+    return (
+      <span className="stimulus-display revealed-display">
+        <span className="card-side-label">{positionLabel}</span>
+        <span className="script-display-text">{getCanonicalDisplayForm(option)}</span>
+        {option.romaji ? (
+          <span className="romaji-display-text">{option.romaji}</span>
+        ) : null}
+        {meaning ? <span className="meaning-display-text">{meaning}</span> : null}
+      </span>
+    );
+  }
+
+  if (presentation.kind === "script-match" || presentation.kind === "script-mismatch") {
     return (
       <span className="stimulus-display script-display">
-        {getVisibleStimulusText(option)}
+        <span className="card-side-label">{positionLabel}</span>
+        <span className="script-display-text">
+          {getPreAnswerDisplayForm(option, presentation)}
+        </span>
       </span>
     );
   }
