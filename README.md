@@ -57,8 +57,8 @@ proof observed successful backend-served `/stimuli/` media requests and no muted
 stimulus media elements.
 
 Current game-loop UX keeps answer feedback and the research note visible until
-the user clicks `Next trial`. Leaderboard and recent attempts are shown from the
-completion screen rather than below the active trial.
+the user clicks `Next round`. Leaderboard and recent attempts are shown from the
+completion screen rather than below the active round.
 
 Stimulus playback is separated from visible presentation. Legacy `.mp4` files
 may still provide sound, but React renders the visible audio placeholder or
@@ -66,7 +66,8 @@ script layer through the condition presentation boundary.
 
 Script Lab selection is available before session start with exactly three
 backend-supported presentation options: Audio only, Script match, and Script
-mismatch. The default remains Audio only, and difficulty remains fixed at `1`.
+mismatch. The default remains Audio only, difficulty remains fixed at `1`, and
+React renders placeholders or script rather than trusting baked-in video visuals.
 
 Remaining blocker: none for the frontend demo path while the backend is running
 on port `8081`.
@@ -79,10 +80,10 @@ Browser path:
 4. Keep Audio only selected, or select Script match / Script mismatch for the
    supported Script Lab presentation comparison.
 5. Start Game.
-6. Watch the fixation, left stimulus, right stimulus, and choice phase.
-7. Choose one ideophone.
-8. Confirm backend feedback and the research note stay visible.
-9. Click `Next trial` to continue.
+6. Watch the fixation, left word, right word, and choice phase.
+7. Choose one card.
+8. Confirm backend feedback identifies selected and correct card details.
+9. Click `Next round` to continue.
 10. Finish the session and see the completion summary.
 11. Use the completion tabs for leaderboard or recent attempts.
 12. Start a new game and confirm the demo setup resets cleanly.
@@ -93,4 +94,5 @@ Browser path:
 npm run dev
 npm run build
 npm run preview
+node scripts/verify-presentation-logic.mjs
 ```
