@@ -116,23 +116,24 @@ Browser devtools Network tab shows POST /api/game/sessions with the selected Scr
 
 2026-06-07 source update: the start screen exposes a small Script Lab selector for Audio only, Script match, and Script mismatch. The selector uses user-facing labels, not backend enum names or numeric values, and session start still hardcodes difficulty level `1`.
 
-## Trial/game loop
+## Round/game loop
 
 - [x] Trial player requests the next round from the backend.
-- [x] Fixation appears before stimuli.
-- [x] Left stimulus appears/plays.
-- [x] Right stimulus appears/plays.
+- [x] Fixation appears before the word cards.
+- [x] Left word card appears/plays.
+- [x] Right word card appears/plays.
 - [x] Both translations are visible at the same time in a neutral vertical stack.
-- [x] Both choices become available after the stimulus sequence.
+- [x] Both choices become available after the media sequence.
 - [x] User can select one of the two options.
-- [x] The two stimulus cards are the only trial answer targets.
+- [x] The two word cards are the only answer targets.
 - [x] Answer submission calls `POST /api/game/sessions/{sessionUuid}/answers`.
 - [x] The selected ideophone ID comes from backend data.
 - [x] The frontend does not calculate correctness as authority.
 - [x] Immediate feedback is displayed using backend response.
-- [x] Feedback remains visible until the user clicks Next trial.
+- [x] Feedback remains visible until the user clicks Next round.
+- [x] Feedback identifies selected and correct side, display form, romaji, and meaning where backend data allows.
 - [x] Response time is sent if implemented.
-- [x] The app can advance to the next trial.
+- [x] The app can advance to the next round.
 - [x] API or media errors show a recoverable error message.
 
 Files to inspect:
@@ -152,15 +153,17 @@ Browser proof:
 ```text
 1. Start a session.
 2. Observe fixation.
-3. Observe left and right stimulus sequence.
+3. Observe left and right word-card sequence.
 4. Select an answer.
-5. Confirm feedback appears.
+5. Confirm feedback appears with selected/correct card details.
 6. Continue to another round.
 ```
 
 2026-06-05 evidence: browser proof answered 30 rounds as `browser_loop_1780627390120`. First round choices were `Select gosogoso` and `Select katakata`; selected `Select gosogoso`; backend feedback was visible as `Correct`. The helper required and passed the pre-game sound check, continued through completion, and exited successfully. A live CDP DOM check on the updated trial tab showed two translation lines stacked vertically with the same left position and width, two fixed-size stimulus cards, zero muted stimulus media elements, and no `.kana-text` overlays.
 
-2026-06-07 source update: feedback now stays visible with the research note until a manual `Next trial` click. The browser-loop helper was updated to assert that behavior before continuing.
+2026-06-07 source update: feedback now stays visible with the research note until a manual `Next round` click. The browser-loop helper was updated to assert that behavior before continuing.
+
+2026-06-07 Phase 2 source update: feedback cards now identify the selected and correct card side, canonical display form, romaji, and meaning when the round/result data provides enough information.
 
 ## Stimuli/media
 
@@ -172,6 +175,9 @@ Browser proof:
 - [x] Audio/video playback errors are visible or at least do not block answer submission permanently.
 - [x] Stimulus display remains acceptable for the demo.
 - [x] Visible stimulus presentation is React-rendered instead of relying on baked-in `.mp4` visuals.
+- [x] Audio only renders neutral A/B placeholders before answer and reveals canonical display details after answer.
+- [x] Script match renders canonical script before answer.
+- [x] Script mismatch renders opposite script before answer when kana conversion is possible and falls back safely otherwise.
 
 Proof:
 
@@ -182,6 +188,29 @@ Browser devtools Network tab shows successful /stimuli/... media requests.
 2026-06-05 evidence: browser proof observed 360 `/stimuli/` requests, 360 successful stimulus responses, and `mutedStimulusCount: 0`. Local Vite development now proxies `/stimuli` to `http://localhost:8081`, while absolute backend URLs remain supported through `src/api/client.ts`. Stimulus media is fetched through the centralized bearer-aware backend helper before playback. `StimulusPlayer` explicitly plays video/audio stimuli unmuted at full volume and stops on autoplay blockage with a manual Play control instead of silently advancing. `IdeophoneCard` no longer overlays frontend kana text on backend-served media, so triangle/control stimuli are not crossed by browser-rendered kana.
 
 2026-06-07 source update: `conditionPresentation.ts`, `StimulusDisplay`, and `StimulusPlayback` split condition mapping, React-owned visual presentation, and hidden media playback. For `CONDITION_1_SOKUON`, the active trial renders neutral React placeholders while legacy `.mp4` media remains playback-only. The browser-loop helper now asserts two React placeholders and no visible legacy media in the choice phase.
+
+2026-06-07 Phase 2 source update: `conditionPresentation.ts` now derives canonical and opposite visible forms from `canonicalScript` plus kana conversion. `StimulusDisplay` reveals canonical form, romaji, and meaning after answer.
+
+2026-06-07 proof update: `node scripts/verify-presentation-logic.mjs` verifies Audio only, Script match, Script mismatch, unknown-condition fallback, HU-to-hiragana canonical display, KD-to-katakana canonical display, and opposite-script conversion for mismatch mode.
+
+Manual Edge proof still needed for rendered Phase 2 presentation:
+
+```text
+1. Start backend on http://localhost:8081.
+2. Start frontend on http://localhost:5174.
+3. Open Edge at http://localhost:5174.
+4. Register or log in.
+5. Confirm Script Lab shows exactly Audio only, Script match, and Script mismatch.
+6. Confirm no difficulty selector, numeric condition controls, or TEXT_ONLY.
+7. Select Audio only, run sound check, and start a session.
+8. Confirm pre-answer cards show neutral A/B placeholders.
+9. Answer one round.
+10. Confirm feedback shows selected side, selected display form, selected romaji, selected meaning, correct side, correct display form, correct romaji, and correct meaning.
+11. Confirm feedback remains readable and Next round is centered/easy to click.
+12. Start again with Script match and confirm pre-answer cards show canonical script.
+13. Start again with Script mismatch and confirm pre-answer cards show opposite script.
+14. Narrow Edge/mobile viewport and confirm cards stack, progress remains readable, feedback cards stack, and Next round is easy to tap.
+```
 
 ## Completion behavior
 
