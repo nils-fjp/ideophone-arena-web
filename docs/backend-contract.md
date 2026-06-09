@@ -1,11 +1,12 @@
-# Ideophone Arena demo contract
+# Ideophone Arena frontend/backend contract
 
-Date: 2026-06-04
-Deadline: 2026-06-05
+Date: 2026-06-07
 
 ## Purpose
 
-This document records the backend/frontend contract for the final demo. It exists to prevent last-minute scope drift.
+This document records the backend/frontend contract for the playable Phase 2
+frontend. It exists to keep Script Lab and presentation work aligned with the
+Spring Boot API.
 
 ## Backend base URL
 
@@ -19,9 +20,9 @@ For local Vite development, leaving `VITE_API_BASE_URL` empty uses the dev-serve
 proxy for `/api` and `/stimuli`. With `VITE_API_BASE_URL=http://localhost:8081`,
 the frontend calls the backend directly.
 
-## Supported demo settings
+## Supported session-start settings
 
-The final demo supports:
+The default game path uses:
 
 ```json
 {
@@ -30,13 +31,20 @@ The final demo supports:
 }
 ```
 
-Other seeded conditions may work:
+Script Lab may swap `conditionName` among exactly these supported values:
 
 ```text
 CONDITION_1_SOKUON
 CONDITION_2_SOKUON
 CONDITION_3_SOKUON
 ```
+
+Do not expose `TEXT_ONLY`, numeric condition values, or arbitrary difficulty
+selection. `difficultyLevel` remains fixed to `1`.
+
+Round responses expose `left.kana`, `left.romaji`, `left.canonicalScript`,
+`right.kana`, `right.romaji`, and `right.canonicalScript`. React owns visible
+placeholder/script presentation; legacy `.mp4` media is playback source only.
 
 ## Authentication
 
@@ -93,7 +101,9 @@ Request body:
 
 ## Completion behavior
 
-When there are no more unanswered rounds, the backend may return 404 from the next-round endpoint with a completion-related message. The frontend must treat this as normal session completion, not as a fatal error or automatic reset.
+When there are no more unanswered rounds, the backend may return an explicit
+completion payload or a completion-related response. The frontend must treat
+session completion as a normal UI state, not as a fatal error or automatic reset.
 
 ## Progress display
 
@@ -119,7 +129,7 @@ GET /api/game/me/attempts
 
 This is enough for minimal personal progress/history.
 
-## Stimuli
+## Media
 
 Stimulus media is served by the backend under:
 
@@ -134,7 +144,7 @@ the returned blob URL rather than loading the protected URL directly in a media
 element.
 
 The frontend should require a pre-game sound check before starting the timed
-trial sequence. Stimulus media must not be force-muted by the frontend. If
+round sequence. Media must not be force-muted by the frontend. If
 unmuted autoplay is blocked by the browser, the frontend should show a manual
 play control instead of silently advancing as if the participant heard the
-stimulus.
+sound.
