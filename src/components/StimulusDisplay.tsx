@@ -9,6 +9,11 @@ type StimulusDisplayProps = {
   revealDetails?: boolean;
 };
 
+// Both faces and all reveal slots stay mounted in every phase so the card
+// keeps one stable size; phases toggle visibility only (no layout shift,
+// CLAUDE.md invariant 5). Pre-answer, the audio-only text face and the
+// romaji/meaning slots render empty — never hidden text — so no script or
+// romaji exists in the DOM before feedback (invariants 4 and 7).
 export default function StimulusDisplay({
   meaning,
   option,
@@ -16,34 +21,50 @@ export default function StimulusDisplay({
   positionLabel,
   revealDetails = false,
 }: StimulusDisplayProps) {
-  if (revealDetails) {
-    return (
-      <span className="stimulus-display revealed-display">
-        <span className="card-side-label">{positionLabel}</span>
-        <span className="script-display-text">{option.canonicalForm}</span>
-        {option.romaji ? (
-          <span className="romaji-display-text">{option.romaji}</span>
-        ) : null}
-        {meaning ? <span className="meaning-display-text">{meaning}</span> : null}
-      </span>
-    );
-  }
-
-  if (presentation.kind === "script-match" || presentation.kind === "script-mismatch") {
-    return (
-      <span className="stimulus-display script-display">
-        <span className="card-side-label">{positionLabel}</span>
-        <span className="script-display-text">{option.displayForm}</span>
-      </span>
-    );
-  }
+  const showText =
+    revealDetails ||
+    presentation.kind === "script-match" ||
+    presentation.kind === "script-mismatch";
+  const scriptText = revealDetails
+    ? option.canonicalForm
+    : showText
+      ? option.displayForm
+      : null;
 
   return (
-    <span className="stimulus-display placeholder-display">
-      <span className="placeholder-mark" aria-hidden="true">
-        {positionLabel}
+    <span className="stimulus-display">
+      <span
+        className={joinClasses(
+          "stimulus-face placeholder-display",
+          !showText || "face-hidden",
+        )}
+        aria-hidden={showText}
+      >
+        <span className="placeholder-mark" aria-hidden="true">
+          {positionLabel}
+        </span>
+        <span className="placeholder-label">{showText ? null : presentation.label}</span>
       </span>
-      <span className="placeholder-label">{presentation.label}</span>
+
+      <span
+        className={joinClasses(
+          "stimulus-face text-display",
+          revealDetails && "revealed-display",
+          showText || "face-hidden",
+        )}
+        aria-hidden={!showText}
+      >
+        <span className="card-side-label">{positionLabel}</span>
+        <span className="script-display-text">{scriptText}</span>
+        <span className="romaji-display-text">
+          {revealDetails ? option.romaji : null}
+        </span>
+        <span className="meaning-display-text">{revealDetails ? meaning : null}</span>
+      </span>
     </span>
   );
+}
+
+function joinClasses(...parts: (string | boolean)[]) {
+  return parts.filter((part) => typeof part === "string").join(" ");
 }

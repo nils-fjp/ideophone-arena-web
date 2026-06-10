@@ -37,8 +37,6 @@ export default function IdeophoneCard({
   onError,
   onSelect,
 }: IdeophoneCardProps) {
-  const optionLabel =
-    option.romaji ?? option.kana ?? option.stimulusFile ?? `option ${option.ideophoneId}`;
   const className = [
     "ideophone-card",
     mode === "button" ? "choice-button" : "",
@@ -47,6 +45,10 @@ export default function IdeophoneCard({
     .filter(Boolean)
     .join(" ");
 
+  // The card and its display content stay mounted in every phase so the slot
+  // keeps its reserved size; `empty` toggles visibility only. The media
+  // element still mounts per-phase to preserve autoplay behavior — it renders
+  // no visible box, so the reserved space is unaffected.
   const content = (
     <>
       <StimulusDisplay
@@ -66,17 +68,15 @@ export default function IdeophoneCard({
           onError={onError}
         />
       ) : null}
-
-      {mode === "button" && presentation.kind === "unknown" ? (
-        <span className="card-meta">Presentation fallback</span>
-      ) : null}
     </>
   );
 
   if (mode === "button") {
+    // Position-only label until feedback: the choice must not reveal romaji,
+    // kana, or meaning through the accessibility tree (invariant 7).
     return (
       <button
-        aria-label={`Choose card ${positionLabel}: ${optionLabel}`}
+        aria-label={`Choose card ${positionLabel}`}
         className={className}
         disabled={disabled || !visible}
         type="button"
@@ -87,5 +87,5 @@ export default function IdeophoneCard({
     );
   }
 
-  return <div className={className}>{visible ? content : null}</div>;
+  return <div className={className}>{content}</div>;
 }

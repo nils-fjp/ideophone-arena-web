@@ -61,8 +61,8 @@ export function getConditionPresentation(
     default:
       return {
         kind: "unknown",
-        label: "Unknown presentation",
-        description: "React falls back to a neutral placeholder for unsupported conditions.",
+        label: "Listen and choose",
+        description: "Cards stay neutral for this round; trust your ears.",
       };
   }
 }

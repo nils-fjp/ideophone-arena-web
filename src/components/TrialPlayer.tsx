@@ -8,6 +8,13 @@ import type {
 } from "../api/types";
 import type { SessionStats } from "../App";
 import { getConditionPresentation } from "../conditionPresentation";
+import {
+  CHOICE_QUESTION_PREFIX,
+  CHOICE_QUESTION_SUFFIX,
+  LISTEN_INSTRUCTION,
+  MEANING_OTHER_PREFIX,
+  MEANING_TARGET_PREFIX,
+} from "../experimentText";
 import { getRoundProblem } from "../roundValidation";
 import FeedbackPanel from "./FeedbackPanel";
 import IdeophoneCard from "./IdeophoneCard";
@@ -170,8 +177,17 @@ export default function TrialPlayer({
   const rightMeaning = hasFeedback
     ? getPostAnswerMeaning(round, answerResult, round.right, targetTranslation)
     : undefined;
-  const phaseCopy =
-    phase === "loading" ? "Loading the next round." : "";
+  // One always-mounted status line; messages swap in place so they never
+  // change document flow.
+  const statusMessage = submitError
+    ? submitError
+    : playbackMessage
+      ? `Sound playback issue: ${playbackMessage}`
+      : phase === "submitting"
+        ? "Submitting..."
+        : phase === "loading"
+          ? "Loading next round..."
+          : "";
 
   return (
     <section className="trial-stage" aria-live="polite">
@@ -197,85 +213,82 @@ export default function TrialPlayer({
         </div>
       </div>
 
-      <div className="trial-copy">
-        <p>Listen to these two Japanese words.</p>
-        {phaseCopy ? <p className="small-copy">{phaseCopy}</p> : null}
-      </div>
+      {/* The full board mounts at fixation with every slot at its final
+          reserved size; phases toggle visibility only, never document flow
+          (invariant 5 — layout stability is also a timing-validity rule). */}
+      <div className="trial-board">
+        <div className="trial-copy">
+          <p>{LISTEN_INSTRUCTION}</p>
+        </div>
 
-      <div
-        className={isFixation ? "stimulus-row fixation-row" : "stimulus-row"}
-        aria-label="Ideophone word cards"
-      >
-        {isFixation ? (
-          <span className="fixation-cross">+</span>
-        ) : (
-          <>
-            <IdeophoneCard
-              autoplayToken={round.roundId * 10 + 1}
-              disabled={!isChoice || phase === "submitting"}
-              meaning={leftMeaning}
-              mediaPlaying={isLeftPlaying}
-              mediaVisible={isLeftPlaying || isChoice || hasFeedback}
-              mode={cardsAreChoices ? "button" : "display"}
-              option={round.left}
-              positionLabel="A"
-              presentation={presentation}
-              revealDetails={hasFeedback}
-              visible={isLeftPlaying || isChoice || hasFeedback}
-              onEnded={handleLeftEnded}
-              onError={handlePlaybackError}
-              onSelect={handleSelect}
-            />
+        <div className="stimulus-row" aria-label="Ideophone word cards">
+          <IdeophoneCard
+            autoplayToken={round.roundId * 10 + 1}
+            disabled={!isChoice || phase === "submitting"}
+            meaning={leftMeaning}
+            mediaPlaying={isLeftPlaying}
+            mediaVisible={isLeftPlaying || isChoice || hasFeedback}
+            mode={cardsAreChoices ? "button" : "display"}
+            option={round.left}
+            positionLabel="A"
+            presentation={presentation}
+            revealDetails={hasFeedback}
+            visible={isLeftPlaying || isChoice || hasFeedback}
+            onEnded={handleLeftEnded}
+            onError={handlePlaybackError}
+            onSelect={handleSelect}
+          />
 
-            <IdeophoneCard
-              autoplayToken={round.roundId * 10 + 2}
-              disabled={!isChoice || phase === "submitting"}
-              meaning={rightMeaning}
-              mediaPlaying={isRightPlaying}
-              mediaVisible={isRightPlaying || isChoice || hasFeedback}
-              mode={cardsAreChoices ? "button" : "display"}
-              option={round.right}
-              positionLabel="B"
-              presentation={presentation}
-              revealDetails={hasFeedback}
-              visible={isRightPlaying || isChoice || hasFeedback}
-              onEnded={handleRightEnded}
-              onError={handlePlaybackError}
-              onSelect={handleSelect}
-            />
-          </>
-        )}
-      </div>
+          <IdeophoneCard
+            autoplayToken={round.roundId * 10 + 2}
+            disabled={!isChoice || phase === "submitting"}
+            meaning={rightMeaning}
+            mediaPlaying={isRightPlaying}
+            mediaVisible={isRightPlaying || isChoice || hasFeedback}
+            mode={cardsAreChoices ? "button" : "display"}
+            option={round.right}
+            positionLabel="B"
+            presentation={presentation}
+            revealDetails={hasFeedback}
+            visible={isRightPlaying || isChoice || hasFeedback}
+            onEnded={handleRightEnded}
+            onError={handlePlaybackError}
+            onSelect={handleSelect}
+          />
 
-      {!hasFeedback ? (
+          <span
+            className={isFixation ? "fixation-cross" : "fixation-cross slot-hidden"}
+            aria-hidden="true"
+          >
+            +
+          </span>
+        </div>
+
         <div className="translation-lines" aria-label="Translations">
           <p className="translation-option">
-            One of them means <strong>{targetTranslation}</strong>
+            {MEANING_TARGET_PREFIX}
+            <strong>{targetTranslation}</strong>
           </p>
           <p className="translation-option">
-            The other means{" "}
+            {MEANING_OTHER_PREFIX}
             <strong>{otherTranslation || "an unavailable translation"}</strong>
           </p>
         </div>
-      ) : null}
 
-      {isChoice ? (
-        <p className="question-text">
-          Which one do you think means <strong>{targetTranslation}</strong>
+        <p className={isChoice ? "question-text" : "question-text slot-hidden"}>
+          {CHOICE_QUESTION_PREFIX}
+          <strong>{targetTranslation}</strong>
+          {CHOICE_QUESTION_SUFFIX}
         </p>
-      ) : null}
 
-      {playbackMessage ? (
-        <p className="notice-text">
-          Sound playback issue: {playbackMessage}
+        <p
+          className={
+            submitError ? "status-line error-text centered" : "status-line notice-text"
+          }
+        >
+          {statusMessage}
         </p>
-      ) : null}
-
-      {phase === "submitting" ? <p className="notice-text">Submitting...</p> : null}
-      {phase === "loading" ? (
-        <p className="notice-text">Loading next round...</p>
-      ) : null}
-      {submitError ? <p className="error-text centered">{submitError}</p> : null}
+      </div>
 
       {hasFeedback ? (
         <>
