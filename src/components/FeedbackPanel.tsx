@@ -20,9 +20,20 @@ export default function FeedbackPanel({
     >
       <h2>{result.correct ? "Correct" : "Incorrect"}</h2>
 
+      {/* Both grid cells render for both outcomes so panel height never
+          depends on correctness; the correct outcome hides the second card
+          but keeps its reserved space (same reserved-slot idiom as the
+          trial board). */}
       <div className="feedback-choice-grid">
         {selectedIsCorrect ? (
-          <ChoiceSummaryCard summary={correctSummary} />
+          <>
+            <ChoiceSummaryCard title="You chose" summary={correctSummary} />
+            <ChoiceSummaryCard
+              title="Correct word"
+              summary={correctSummary}
+              hidden
+            />
+          </>
         ) : (
           <>
             <ChoiceSummaryCard title="You chose" summary={selectedSummary} />
@@ -44,14 +55,21 @@ type ChoiceSummary = {
 };
 
 function ChoiceSummaryCard({
+  hidden = false,
   summary,
   title,
 }: {
+  hidden?: boolean;
   summary: ChoiceSummary;
   title?: string;
 }) {
   return (
-    <article className="feedback-choice-card">
+    <article
+      className={
+        hidden ? "feedback-choice-card slot-hidden" : "feedback-choice-card"
+      }
+      aria-hidden={hidden || undefined}
+    >
       {title ? <h3>{title}</h3> : null}
       <p className="feedback-side">Card {summary.side}</p>
       <p className="feedback-display-form">{summary.displayForm}</p>
