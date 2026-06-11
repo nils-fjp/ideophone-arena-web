@@ -492,11 +492,29 @@ button {
   margin: 0;
 }
 
-.question-text {
+/* One reserved box shared by the choice question and the feedback-phase Next
+   round button; both children stack in the same grid cell and toggle via
+   visibility, so the slot never changes size (invariant 5). */
+.question-slot {
+  display: grid;
   min-height: 54px;
   margin: 1.25rem 0 0;
+}
+
+.question-slot > * {
+  grid-area: 1 / 1;
+}
+
+.question-text {
+  margin: 0;
   font-size: 1.55rem;
   line-height: 1.35;
+}
+
+.feedback-next-button {
+  min-width: 160px;
+  margin: 0;
+  place-self: center;
 }
 
 /* Always-mounted message slot; reserves one line so status swaps never
@@ -542,12 +560,6 @@ button {
 .feedback h2 {
   margin: 0 0 0.75rem;
   font-size: 1.6rem;
-}
-
-.feedback-next-button {
-  display: block;
-  min-width: 160px;
-  margin: 0 auto 0.5rem;
 }
 
 .feedback-choice-grid {
@@ -630,11 +642,23 @@ table {
   font-size: 0.92rem;
 }
 
+.leaderboard-pager {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 0.75rem;
+  font-size: 0.92rem;
+}
+
 th,
 td {
   padding: 0.45rem 0.35rem;
   border-bottom: 1px solid #c7c5c0;
   text-align: left;
+  /* Long unbroken usernames must wrap instead of widening the table past
+     narrow viewports. */
+  overflow-wrap: anywhere;
 }
 
 .attempt-list {
@@ -878,10 +902,13 @@ td {
     margin-top: 0.8rem;
   }
 
-  .question-text {
+  .question-slot {
     min-height: 0;
-    font-size: 1.25rem;
     margin-top: 0.8rem;
+  }
+
+  .question-text {
+    font-size: 1.25rem;
   }
 
   .feedback {
@@ -915,7 +942,5 @@ td {
 
   .feedback-next-button {
     width: min(100%, 260px);
-    margin-top: 0;
-    margin-bottom: 0.4rem;
   }
 }

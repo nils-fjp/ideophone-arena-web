@@ -275,11 +275,27 @@ export default function TrialPlayer({
           </p>
         </div>
 
-        <p className={isChoice ? "question-text" : "question-text slot-hidden"}>
-          {CHOICE_QUESTION_PREFIX}
-          <strong>{targetTranslation}</strong>
-          {CHOICE_QUESTION_SUFFIX}
-        </p>
+        {/* Question and Next-round button share one reserved slot: the
+            question shows at choice, the button at feedback, never both. */}
+        <div className="question-slot">
+          <p className={isChoice ? "question-text" : "question-text slot-hidden"}>
+            {CHOICE_QUESTION_PREFIX}
+            <strong>{targetTranslation}</strong>
+            {CHOICE_QUESTION_SUFFIX}
+          </p>
+          <button
+            className={
+              hasFeedback
+                ? "primary-button feedback-next-button"
+                : "primary-button feedback-next-button slot-hidden"
+            }
+            type="button"
+            disabled={!hasFeedback}
+            onClick={handleNextTrial}
+          >
+            Next round
+          </button>
+        </div>
 
         <p
           className={
@@ -291,19 +307,10 @@ export default function TrialPlayer({
       </div>
 
       {hasFeedback ? (
-        <>
-          <FeedbackPanel
-            result={answerResult}
-            round={round}
-          />
-          <button
-            className="primary-button feedback-next-button"
-            type="button"
-            onClick={handleNextTrial}
-          >
-            Next round
-          </button>
-        </>
+        <FeedbackPanel
+          result={answerResult}
+          round={round}
+        />
       ) : null}
     </section>
   );

@@ -106,6 +106,30 @@ describe("TrialPlayer frozen experiment text", () => {
   });
 });
 
+describe("TrialPlayer reserved question slot", () => {
+  // The Next round button shares the reserved question slot with the choice
+  // question; both mount at fixation and toggle via visibility (invariant 5).
+  it("mounts the Next round button inside the question slot, hidden and disabled", () => {
+    const markup = renderTrialBoard(validRound);
+
+    expect(countOccurrences(markup, "Next round")).toBe(1);
+    const slotStart = markup.indexOf('class="question-slot"');
+    expect(slotStart).toBeGreaterThan(-1);
+    const slotMarkup = markup.slice(slotStart, markup.indexOf("status-line"));
+    expect(slotMarkup).toContain(CHOICE_QUESTION_PREFIX);
+    expect(slotMarkup).toContain("Next round");
+    expect(slotMarkup).toMatch(
+      /<button[^>]*feedback-next-button slot-hidden[^>]*disabled[^>]*>Next round<\/button>/,
+    );
+  });
+
+  it("does not render the old button position outside the trial board", () => {
+    const markup = renderTrialBoard(validRound);
+    const boardEnd = markup.lastIndexOf("status-line");
+    expect(markup.indexOf("Next round")).toBeLessThan(boardEnd);
+  });
+});
+
 describe("TrialPlayer round validation wiring", () => {
   it("shows the round-problem panel instead of guessing a display form", () => {
     const markup = renderToStaticMarkup(
