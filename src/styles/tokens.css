@@ -1,0 +1,110 @@
+/* ============================================================================
+   Ideophone Arena — design tokens
+   Thesis: "laboratory ink and paper" — editorial and scientific, warm rather
+   than sterile. Raw values live ONLY in this file; components consume the
+   semantic tokens. Semantics are surface-relative (not light-mode-literal) so
+   a dark theme can re-map them later without touching component CSS.
+   Modality accents derive from the thesis figure palette (thesis_colors.xml):
+   accent1 #9C6114 (auditory), accent2 #E9C4C7 (visual), accent3 #B9D3DC
+   (interoceptive) — text-safe variants are tuned for WCAG AA on both paper
+   surfaces; -soft variants keep the original figure tints for fills.
+   ========================================================================== */
+
+:root {
+  /* Surfaces — warm paper neutrals: page ground, washi card, raised panel. */
+  --surface-page: #e8e3d9;
+  --surface-card: #fbf8f2;
+  --surface-raised: #ffffff;
+
+  /* Ink — warm sumi near-black; never pure #000. */
+  --ink-primary: #211e19; /* 13.0:1 on page, 15.7:1 on card */
+  --ink-muted: #5e5749; /* 5.6:1 on page, 6.8:1 on card */
+  --ink-inverse: #fbf8f2; /* text on accent/ink fills */
+
+  /* Primary accent — vermillion (shu-iro family), evolved from the old
+     crimson #e90b3f. 4.99:1 with --ink-inverse text; as colored TEXT use it
+     on card/raised surfaces (4.7:1) — on the page ground it only clears the
+     3:1 large-text/UI bar. */
+  --accent: #c8401f;
+  --accent-hover: #b23618;
+  --accent-active: #9e3015;
+
+  /* Modality accents (thesis figures). Base = AA text on page AND card;
+     -soft = the verbatim/derived figure tint for fills and chart areas. */
+  --accent-auditory: #8a5512;
+  --accent-auditory-soft: #ebd7b0;
+  --accent-visual: #99454f;
+  --accent-visual-soft: #e9c4c7;
+  --accent-interoceptive: #386376;
+  --accent-interoceptive-soft: #b9d3dc;
+
+  /* Feedback — correct/incorrect in thesis-compatible tones (paper-green ink
+     and burnt red), AA as text on both surfaces, distinct from --accent. */
+  --positive: #2a6b43;
+  --positive-soft: #adcab8;
+  --negative: #9d2c1a;
+  --negative-soft: #e3c0b8;
+
+  /* Typography — self-hosted faces (OFL), Nils-adjudicated 2026-06-13:
+     headings = Zen Maru Gothic, body = LINE Seed JP 400, stimulus kana =
+     LINE Seed JP Bold (good kata/hira contrast, semi-playful, true 700).
+     Body and stimuli share DNA; the rounded headings keep the warm-lab voice
+     distinct. Fallback stacks keep text renderable before the woff2 slices
+     arrive. */
+  --font-display: "Zen Maru Gothic", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-stimuli: "LINE Seed JP", "Zen Maru Gothic", "Hiragino Sans", "Yu Gothic", sans-serif;
+  --font-body: "LINE Seed JP", "Zen Kaku Gothic New", "Hiragino Sans", "Yu Gothic", sans-serif;
+
+  /* Type scale — body sizes plus dedicated kana display sizes. The JP faces
+     render visually small for their em box, so control text gets its own
+     role (--text-ui) and the heading sizes sit slightly above their Latin
+     equivalents. */
+  --text-xs: 0.8rem;
+  --text-sm: 0.92rem;
+  --text-base: 1rem;
+  --text-ui: 1.1rem; /* buttons, tabs, control labels */
+  --text-md: 1.2rem;
+  --text-lg: 1.45rem;
+  --text-xl: 1.75rem;
+  --text-2xl: 2.55rem;
+  --text-kana-card: clamp(2.6rem, 7vw, 3.6rem); /* choosing-card kana */
+  --text-kana-feedback: 1.9rem; /* feedback-card kana */
+
+  /* Line heights — kana display lines stay tight; body stays readable. */
+  --leading-kana: 1.08;
+  --leading-tight: 1.2;
+  --leading-body: 1.45;
+
+  /* Tracking — for small uppercase labels (e.g. "NOT SCORED", card sides). */
+  --tracking-wide: 0.04em;
+
+  /* Spacing scale. */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --space-6: 2rem;
+  --space-7: 3rem;
+  --space-8: 4rem;
+
+  /* Radii. */
+  --radius-sm: 4px;
+  --radius-md: 7px;
+  --radius-lg: 10px;
+  --radius-pill: 999px;
+
+  /* Elevation — soft warm-ink shadows; paper sits close to the ground. */
+  --shadow-card: 0 1px 2px rgba(33, 30, 25, 0.08), 0 2px 8px rgba(33, 30, 25, 0.06);
+  --shadow-raised: 0 2px 4px rgba(33, 30, 25, 0.1), 0 8px 24px rgba(33, 30, 25, 0.1);
+
+  /* Borders — hairlines in diluted ink; -mid for form-control affordance
+     (≥3:1 non-text contrast on every surface). */
+  --border-strong: #211e19;
+  --border-mid: #867f70;
+  --border-soft: #c9c2b4;
+
+  /* Focus — visible vermillion ring on any surface. */
+  --focus-ring: 2px solid var(--accent);
+  --focus-ring-offset: 2px;
+}

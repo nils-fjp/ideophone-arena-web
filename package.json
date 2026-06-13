@@ -11,6 +11,12 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@fontsource/kaisei-decol": "^5.2.7",
+    "@fontsource/klee-one": "^5.2.8",
+    "@fontsource/line-seed-jp": "^5.2.2",
+    "@fontsource/rocknroll-one": "^5.2.8",
+    "@fontsource/zen-kaku-gothic-new": "^5.2.7",
+    "@fontsource/zen-maru-gothic": "^5.2.8",
     "react": "^19.2.6",
     "react-dom": "^19.2.6",
     "react-router-dom": "^7.15.1"

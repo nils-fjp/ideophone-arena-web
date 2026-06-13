@@ -1,10 +1,9 @@
+// DEV-ONLY entry for /styleguide.html (Checkpoint 1 of the design-token pass).
+// Loads every candidate face so the pairings can be compared side by side;
+// the player app will import only the chosen pairing.
 import React from "react";
 import ReactDOM from "react-dom/client";
-import App from "./App";
 
-// Self-hosted identity faces (OFL 1.1, woff2 unicode-range subsets):
-// LINE Seed JP = body (400) and stimulus kana (Bold 700), Zen Maru Gothic =
-// display headings. Zen Kaku Gothic New stays loaded as the body fallback.
 import "@fontsource/line-seed-jp/latin-400.css";
 import "@fontsource/line-seed-jp/latin-700.css";
 import "@fontsource/line-seed-jp/japanese-400.css";
@@ -13,15 +12,27 @@ import "@fontsource/zen-maru-gothic/latin-400.css";
 import "@fontsource/zen-maru-gothic/latin-700.css";
 import "@fontsource/zen-maru-gothic/japanese-400.css";
 import "@fontsource/zen-maru-gothic/japanese-700.css";
+import "@fontsource/kaisei-decol/latin-400.css";
+import "@fontsource/kaisei-decol/latin-700.css";
+import "@fontsource/kaisei-decol/japanese-400.css";
+import "@fontsource/kaisei-decol/japanese-700.css";
+import "@fontsource/rocknroll-one/latin-400.css";
+import "@fontsource/rocknroll-one/japanese-400.css";
+import "@fontsource/klee-one/latin-400.css";
+import "@fontsource/klee-one/latin-600.css";
+import "@fontsource/klee-one/japanese-400.css";
+import "@fontsource/klee-one/japanese-600.css";
 import "@fontsource/zen-kaku-gothic-new/latin-400.css";
 import "@fontsource/zen-kaku-gothic-new/latin-700.css";
 import "@fontsource/zen-kaku-gothic-new/japanese-400.css";
 import "@fontsource/zen-kaku-gothic-new/japanese-700.css";
 
-import "./styles/app.css";
+import "../styles/tokens.css";
+import "../styles/styleguide.css";
+import StyleGuide from "./StyleGuide";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    <App />
+    <StyleGuide />
   </React.StrictMode>,
 );

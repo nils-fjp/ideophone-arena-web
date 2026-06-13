@@ -95,6 +95,18 @@ shows a Previous/Next pager when `totalPages > 1`.
 11. Use the completion tabs for leaderboard or recent attempts.
 12. Start a new game and confirm the demo setup resets cleanly.
 
+## Visual identity
+
+Design tokens live in `src/styles/tokens.css` ("laboratory ink and paper":
+warm paper surfaces, sumi ink, vermillion accent, modality accents derived
+from the thesis figure palette). `src/styles/app.css` consumes tokens only.
+Fonts are self-hosted woff2 via @fontsource (OFL 1.1): LINE Seed JP (body 400
+and stimulus kana Bold 700) and Zen Maru Gothic (display headings), with
+Zen Kaku Gothic New retained as the body fallback; imported in `src/main.tsx`.
+A dev-only style guide at `http://localhost:5174/styleguide.html` renders the
+palette, font-pairing candidates, and feedback states; it is not part of the
+production build or the player flow.
+
 ## Scripts
 
 ```bash
